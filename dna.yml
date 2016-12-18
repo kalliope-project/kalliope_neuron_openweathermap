@@ -1,0 +1,8 @@
+---
+   neuron_name: "openweathermap"
+   author: "Kalliope project team"
+
+   minimum_kalliope_version: 0.4.0
+
+   tags:
+      - "openweathermap"
