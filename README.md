@@ -4,6 +4,11 @@
 
 Give the today and tomorrow weather with the related data (humidity, temperature, etc ...) for a given location. 
 
+## Installation
+```
+kalliope neuron-install --git-url "https://github.com/kalliope-project/kalliope_neuron_openweathermap.git"
+```
+
 ## Options
 
 | parameter | required | default | choices                     | comment                                                                                           |
