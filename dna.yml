@@ -1,9 +1,11 @@
 ---
-   name: "openweathermap"
-   type: "neuron"
-   author: "Kalliope project team"
+  name: "openweathermap"
+  type: "neuron"
+  author: "Kalliope project team"
 
-   minimum_kalliope_version: 0.4.0
+  kalliope_supported_version:
+    - 0.4.0
 
-   tags:
-      - "openweathermap"
+  tags:
+    - "openweathermap"
+    - "wheather"
