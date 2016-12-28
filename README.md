@@ -6,7 +6,7 @@ Give the today and tomorrow weather with the related data (humidity, temperature
 
 ## Installation
 ```
-kalliope install --git-url "https://github.com/kalliope-project/kalliope_neuron_openweathermap.git"
+kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_openweathermap.git
 ```
 
 ## Options
