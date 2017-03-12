@@ -20,7 +20,6 @@ class Openweathermap(NeuronModule):
             if self.country is not None:
                 extended_location = self.location + "," + self.country
 
-
             owm = pyowm.OWM(API_key=self.api_key, language=self.lang)
 
             # Tomorrow
@@ -68,8 +67,13 @@ class Openweathermap(NeuronModule):
 
             humidity_today = weather_today.get_humidity()
 
-            wind_today= weather_today.get_wind()
-            wind_today_deg = wind_today['deg']
+            wind_today = weather_today.get_wind()
+            # disable temporarily this data. Will be fixed in the next release of pyown
+            # see: https://github.com/csparpa/pyowm/issues/177
+            try:
+                wind_today_deg = wind_today['deg']
+            except KeyError:
+                wind_today_deg = None
             wind_today_speed = wind_today['speed']
 
             snow_today = weather_today.get_snow()
