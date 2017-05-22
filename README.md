@@ -55,22 +55,7 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 
 ## Synapses example
 
-```
-  - name: "getthe-weather"
-    signals:
-      - order: "what is the weather in {{ location }}"
-    neurons:
-      - openweathermap:
-          api_key: "fdfba4097c318aed7836b2a85a6a05ef"
-          lang: "en"
-          temp_unit: "celsius"
-          say_template:
-          - "Today in {{ location }} the weather is {{ weather_today }} with a temperature of {{ temp_today_temp }} degree and tomorrow the weather will be {{ weather_tomorrow }} with a temperature of {{ temp_tomorrow_temp }} degree"
-          args:
-          - location
-```
 
-You also can define the "location" args directly in neuron argument list. 
 ```
   - name: "get-the-weather"
     signals:
@@ -84,6 +69,21 @@ You also can define the "location" args directly in neuron argument list.
           country: "FR"
           say_template:
           - "Aujourd'hui a {{ location }} le temps est {{ weather_today }} avec une température de {{ temp_today_temp }} degrés et demain le temps sera {{ weather_tomorrow }} avec une température de {{ temp_tomorrow_temp }} degrés"
+```
+Load the location from your order
+```
+  - name: "getthe-weather"
+    signals:
+      - order: "what is the weather in {{ location }}"
+    neurons:
+      - openweathermap:
+          api_key: "fdfba4097c318aed7836b2a85a6a05ef"
+          lang: "en"
+          temp_unit: "celsius"
+          location: "{{ location }}"
+          say_template:
+          - "Today in {{ location }} the weather is {{ weather_today }} with a temperature of {{ temp_today_temp }} degree and tomorrow the weather will be {{ weather_tomorrow }} with a temperature of {{ temp_tomorrow_temp }} degree"
+          
 ```
 
 ## Templates example 
