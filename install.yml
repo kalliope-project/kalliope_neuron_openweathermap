@@ -1,5 +1,5 @@
 ---
-- name: Playbool
+- name: Playbook
   hosts: localhost
   gather_facts: no
   connection: local
