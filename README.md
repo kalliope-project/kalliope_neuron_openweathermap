@@ -15,9 +15,9 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 |-----------|----------|---------|-----------------------------|---------------------------------------------------------------------------------------------------|
 | api_key   | YES      | None    |                             | User API key of the OWM API                                                                       |
 | location  | YES      | None    |                             | The location                                                                                      |
-| lang      | No       | en      | multiple                    | First 2 letters cf : section Multilingual support in : [lang](https://openweathermap.org/current) |
+| lang      | No       | en      | multiple                    | First 2 letters cf : section Multilingual support in : [lang](https://openweathermap.org/current#multi) |
 | temp_unit | No       | Kelvin  | Celsius, Kelvin, Fahrenheit |                                                            |                                                      
-| country   | No       | US      | multiple                    | Frist 2 letters of the country cf API doc                  |
+| country   | No       | US      | multiple                    | [ISO-3166 Country Code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)                 |
 | day       | No       | None    | today or a weekday          | To get the forecast for a specific day of the week         |
 | days      | No       | All weekdays in english |              | To ask the day in your language you need to translate them, look at the example |
 
