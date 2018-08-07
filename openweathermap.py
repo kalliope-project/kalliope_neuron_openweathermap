@@ -1,7 +1,14 @@
+# -*- coding: utf-8 -*-
 import pyowm
+import requests
+import json
+import sys
+from datetime import datetime
 
 from kalliope.core.NeuronModule import NeuronModule, MissingParameterException
 
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 class Openweathermap(NeuronModule):
     def __init__(self, **kwargs):
@@ -13,12 +20,23 @@ class Openweathermap(NeuronModule):
         self.lang = kwargs.get('lang', 'en')
         self.temp_unit = kwargs.get('temp_unit', 'celsius')
         self.country = kwargs.get('country', None)
-
+        self.day = kwargs.get('day', None)
+        self.days = kwargs.get('days_translation', {'Monday': 'monday',
+                                        'Tuesday': 'tuesday',
+                                        'Wednesday': 'wednesday',
+                                        'Thursday': 'thursday',
+                                        'Friday': 'friday',
+                                        'Saturday': 'saturday',
+                                        'Sunday': 'sunday'})
+        
         # check if parameters have been provided
         if self._is_parameters_ok():
+            # Units in pyown need to be in lowercase
+            self.temp_unit = self.temp_unit.lower()
+            
             extended_location = self.location
             if self.country is not None:
-                extended_location = self.location + "," + self.country
+                self.extended_location = self.location + "," + self.country
 
             owm = pyowm.OWM(API_key=self.api_key, language=self.lang)
 
@@ -79,7 +97,9 @@ class Openweathermap(NeuronModule):
             snow_today = weather_today.get_snow()
             rain_today = weather_today.get_rain()
             clouds_coverage_today = weather_today.get_clouds()
-
+            if self.day:
+                forecast = self.GetForecast(extended_location)
+                
             message = {
                 "location": self.location,
 
@@ -113,9 +133,46 @@ class Openweathermap(NeuronModule):
                 "rain_tomorrow": rain_tomorrow,
                 "clouds_coverage_tomorrow": clouds_coverage_tomorrow
             }
-
+            if self.day:
+                message.update(forecast)
             self.say(message)
 
+    def GetForecast(self, location):
+        # We dont use pyown for the daily forecast, and we don't won't to break the current config so we convert the units to the required parameter for the API call
+        if self.temp_unit == 'celsius':
+            self.temp_unit = 'metric'
+        if self.temp_unit == 'fahrenheit':
+            self.temp_unit = 'imperial'
+        if self.temp_unit == 'kelvin':
+            self.temp_unit = 'kelvin'
+ 
+        # We use the API for the 5 day / 3 hours --> https://openweathermap.org/forecast5
+        # Don't know why but we get a return of 7 days, so we can ask the weather for the next 7 days.
+        url = "http://api.openweathermap.org/data/2.5/forecast/daily?q=" + location + "&lang=" + self.lang + "&APPID=" + self.api_key + "&units=" + self.temp_unit
+        response = requests.get(url)
+        data = response.json()
+        
+        # To get the forecast for today we dont need self.days, so we update the dictionary with the current day
+        if self.day == 'today':
+            self.days.update({datetime.now().strftime('%A') : 'today'})
+
+        forecasts = {}
+        forecasts.update({'forecast_city' : data['city']['name']})
+        for forecast in data['list']:   
+            for en_day, user_day_in_dict in self.days.iteritems():
+                if user_day_in_dict.lower() == self.day.lower():
+                    if en_day == datetime.fromtimestamp(forecast['dt']).strftime('%A'):
+                        forecasts.update({'forecast_temp' : int(round(forecast['temp']['day']))})
+                        forecasts.update({'forecast_min_temp' : int(round(forecast['temp']['min']))})
+                        forecasts.update({'forecast_max_temp' : int(round(forecast['temp']['max']))})
+                        forecasts.update({'forecast_evening_temp' : int(round(forecast['temp']['eve']))})
+                        forecasts.update({'forecast_morning_temp' : int(round(forecast['temp']['morn']))})
+                        forecasts.update({'forecast_night_temp' : int(round(forecast['temp']['night']))})
+                        for weather_description in forecast['weather']:
+                            forecasts.update({'forecast_weather_descripton' : weather_description['description']})
+                        forecasts.update({'forecast_day' : self.day})
+        return forecasts
+    
     def _is_parameters_ok(self):
         """
         Check if received parameters are ok to perform operations in the neuron
