@@ -19,7 +19,7 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 | temp_unit | No       | Kelvin  | Celsius, Kelvin, Fahrenheit |                                                            |                                                      
 | country   | No       | US      | multiple                    | [ISO-3166 Country Code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)                 |
 | day       | No       | None    | today or a weekday          | To get the forecast for a specific day of the week         |
-| days      | No       | All weekdays in english |              | To ask the day in your language you need to translate them, look at the example |
+| days_translation | No       | All weekdays in english |              | To ask the day in your language you need to translate them, look at the example |
 
 ## Return Values
 
@@ -126,7 +126,7 @@ Forecast eample for French users:
           country: "FR"
           location: "{{ location }}"
           day: "{{ day }}"
-          days:
+          days_translation:
             Monday: "Lundi"
             Tuesday: "Mardi"
             Wednesday: "Mercredi"
@@ -148,7 +148,7 @@ Forecast for German users:
           country: "DE"
           location: "{{ location }}"
           day: "{{ day }}"
-          days:
+          days_translation:
             Monday: "Montag"
             Tuesday: "Dienstag"
             Wednesday: "Mittwoch"
