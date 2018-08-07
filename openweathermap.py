@@ -153,22 +153,22 @@ class Openweathermap(NeuronModule):
         if self.day == 'today':
             self.days.update({datetime.now().strftime('%A') : 'today'})
 
-        forecast = {}
-        forecast.update({'forecast_city' : data['city']['name']})
-        for f in data['list']:   
-            for d, k in self.days.iteritems():
-                if k.lower() == self.day.lower():
-                    if d == datetime.fromtimestamp(f['dt']).strftime('%A'):
-                        forecast.update({'forecast_temp' : int(round(f['temp']['day']))})
-                        forecast.update({'forecast_min_temp' : int(round(f['temp']['min']))})
-                        forecast.update({'forecast_max_temp' : int(round(f['temp']['max']))})
-                        forecast.update({'forecast_evening_temp' : int(round(f['temp']['eve']))})
-                        forecast.update({'forecast_morning_temp' : int(round(f['temp']['morn']))})
-                        forecast.update({'forecast_night_temp' : int(round(f['temp']['night']))})
-                        for a in f['weather']:
-                            forecast.update({'forecast_weather_descripton' : a['description']})
-                        forecast.update({'forecast_day' : self.day})
-        return forecast
+        forecasts = {}
+        forecasts.update({'forecast_city' : data['city']['name']})
+        for forecast in data['list']:   
+            for en_day, user_day_in_dict in self.days.iteritems():
+                if user_day_in_dict.lower() == self.day.lower():
+                    if en_day == datetime.fromtimestamp(forecast['dt']).strftime('%A'):
+                        forecasts.update({'forecast_temp' : int(round(forecast['temp']['day']))})
+                        forecasts.update({'forecast_min_temp' : int(round(forecast['temp']['min']))})
+                        forecasts.update({'forecast_max_temp' : int(round(forecast['temp']['max']))})
+                        forecasts.update({'forecast_evening_temp' : int(round(forecast['temp']['eve']))})
+                        forecasts.update({'forecast_morning_temp' : int(round(forecast['temp']['morn']))})
+                        forecasts.update({'forecast_night_temp' : int(round(forecast['temp']['night']))})
+                        for weather_description in forecast['weather']:
+                            forecasts.update({'forecast_weather_descripton' : weather_description['description']})
+                        forecasts.update({'forecast_day' : self.day})
+        return forecasts
     
     def _is_parameters_ok(self):
         """
