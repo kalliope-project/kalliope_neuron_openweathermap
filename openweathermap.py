@@ -17,7 +17,7 @@ class Openweathermap(NeuronModule):
         self.temp_unit = kwargs.get('temp_unit', 'celsius')
         self.country = kwargs.get('country', None)
         self.day = kwargs.get('day', None)
-        self.days = kwargs.get('days', {'Monday': 'monday',
+        self.days = kwargs.get('days_translation', {'Monday': 'monday',
                                         'Tuesday': 'tuesday',
                                         'Wednesday': 'wednesday',
                                         'Thursday': 'thursday',
