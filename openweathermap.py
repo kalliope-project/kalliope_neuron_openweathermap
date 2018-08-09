@@ -81,7 +81,10 @@ class Openweathermap(NeuronModule):
             temp_tomorrow_temp = temp_tomorrow['day']
             temp_tomorrow_temp_max = temp_tomorrow['max']
             temp_tomorrow_temp_min = temp_tomorrow['min']
-
+            temp_tomorrow_eve = temp_tomorrow['eve']
+            temp_tomorrow_morning = temp_tomorrow['morn']
+            temp_tomorrow_night = temp_tomorrow['night']
+            
             pressure_tomorrow = weather_tomorrow.get_pressure()
             pressure_tomorrow_press = pressure_tomorrow.get('press', None)
             pressure_tomorrow_sea_level = pressure_tomorrow.get('sea_level', None)
@@ -150,6 +153,9 @@ class Openweathermap(NeuronModule):
                     "temp": int(round(temp_tomorrow_temp)),
                     "max_temp": int(round(temp_tomorrow_temp_max)),
                     "min_temp": int(round(temp_tomorrow_temp_min)),
+                    "evening_temp": int(round(temp_tomorrow_eve)),
+                    "morning_temp": int(round(temp_tomorrow_night)),
+                    "night_temp": int(round(temp_tomorrow_morning)),
                     "pressure": pressure_tomorrow_press,
                     "sea_level": pressure_tomorrow_sea_level,
                     "humidity": humidity_tomorrow,
