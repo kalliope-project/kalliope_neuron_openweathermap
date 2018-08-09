@@ -17,7 +17,7 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 | location  | YES      | None    |                             | The location                                                                                               |
 | lang      | No       | en      |                             | Look for the supported languages [here](https://openweathermap.org/current#multi)                          |
 | temp_unit | No       | celsius | celsius, kelvin, fahrenheit |                                                                                                            |                                                      
-| country   | No       | None    |                             | [ISO-3166 Country Code](https://en.wikipedia.org                                                           |
+| country   | No       | None    |                             | [ISO-3166 Country Code](https://en.wikipedia.org)                                                           |
 | 12h_format| no       | False   | True/False                  | To get 12 hour format for sunrise and sunset return value                                                  |                
 | day       | No       | None    | today or a weekday          | Only needed if you want a single synapse to catch the day and translate it in a file_template (required)   |
 
