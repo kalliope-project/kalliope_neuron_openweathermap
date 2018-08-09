@@ -48,7 +48,10 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 | tomorrow['weather_status']  | The current weather conditions             | String | light rain             |
 | tomorrow['temp']            | The tomorrow temperature                   | Int    | 16                     |            
 | tomorrow['max_temp']        | The tomorrow max. temperature              | Int    | 17                     |            
-| tomorrow['min_temp']        | The tomorrow min. temperature              | Int    | 8                      |            
+| tomorrow['min_temp']        | The tomorrow min. temperature              | Int    | 8                      |
+| tomorrow['morning_temp']    | The tomorrow temperature at the morning    | Int    | 8                      |
+| tomorrow['evening_temp']    | The tomorrow temperature at the evening    | Int    | 14                     |
+| tomorrow['night_temp']      | The tomorrow temperature at the night      | Int    | 11                     |
 | tomorrow['pressure']        | The tomorrow pressure in hectopascals      | Float  | 859.78                 |            
 | tomorrow['sea_level']       | The tomorrow sea level pressure in hpa     | Float  | None                   |            
 | tomorrow['humidity']        | The tomorrow humidity in percent           | Float  | 61                     |            
