@@ -1,9 +1,12 @@
-import pprint
-
+import sys
 import pyowm
 from datetime import datetime
 
 from kalliope.core.NeuronModule import NeuronModule, MissingParameterException
+
+if sys.version_info < (3, 0):
+    reload(sys)
+    sys.setdefaultencoding('utf8')
 
 
 def get_weather_forecast(daily_forecasts, day):
@@ -201,7 +204,6 @@ class Openweathermap(NeuronModule):
 
             if self.day:
                 message.update({"day": self.day.lower()})
-            pprint.pprint(message)
             self.say(message)
 
     def _is_parameters_ok(self):
