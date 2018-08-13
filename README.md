@@ -61,6 +61,7 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 | sea_level      | The expected sea level pressure in hpa   | Float  | None                 |
 | rainfall       | The expected rainfall volume             | Float  | 13.76                |
 | snowfall       | The expected snowfall volume             | Float  | None                 |
+| clouds_coverage| The expected cloud coverage in percent   | Float  | 65                   |
 
 ## Forecast
 To get the forecast for each day of the week, replace today with: monday, tuesday, wednesday, thursday, friday, saturday or sunday
