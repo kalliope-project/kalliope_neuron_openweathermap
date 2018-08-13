@@ -113,7 +113,7 @@ Forecast example for monday
       - openweathermap:
           api_key: "fdfba4097c318aed7836b2a85a6a05ef"
           lang: "en"
-          location: "{{ location }}"
+          location: "grenoble"
           say_template: "The weather on Monday will be {{ monday['weather_status'] }} with temperatures from  {{ monday['min_temp'] }}  to  {{ monday['max_temp'] }} degree"
 ```
 
