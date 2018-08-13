@@ -1,6 +1,6 @@
 import sys
 import pyowm
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from kalliope.core.NeuronModule import NeuronModule, MissingParameterException
 
@@ -27,7 +27,8 @@ def get_weather_forecast(daily_forecasts, day):
         "pressure": daily_forecasts[day]['forecast_pressure'].get('press', None),
         "sea_level": daily_forecasts[day]['forecast_pressure'].get('sea_level', None),
         "rainfall": daily_forecasts[day]['forecast_rain'].get('all', None),
-        "snowfall": daily_forecasts[day]['forecast_snow'].get('all', None)
+        "snowfall": daily_forecasts[day]['forecast_snow'].get('all', None),
+        "clouds_coverage": daily_forecasts[day]['forecast_clouds']
     }
 
 
@@ -52,11 +53,13 @@ class Openweathermap(NeuronModule):
             extended_location = self.location
             if self.country is not None:
                 self.extended_location = self.location + "," + self.country
-
             owm = pyowm.OWM(API_key=self.api_key, language=self.lang)
             
             # Current 
-            observation = owm.weather_at_place(extended_location)
+            try: 
+                observation = owm.weather_at_place(extended_location)
+            except pyowm.exceptions.api_response_error.NotFoundError:
+                raise MissingParameterException("OpenWeatherMap did not find the location %s" % self.location)
             weather_current = observation.get_weather()
             
             found_location = observation.get_location()
@@ -98,43 +101,14 @@ class Openweathermap(NeuronModule):
             
             clouds_coverage_current = weather_current.get_clouds()
             
-            # Tomorrow
+            # Forecast
             forecast = owm.daily_forecast(extended_location)
-            tomorrow = pyowm.timeutils.tomorrow()
-            weather_tomorrow = forecast.get_weather_at(tomorrow)
-            weather_tomorrow_status = weather_tomorrow.get_detailed_status()
-
-            temp_tomorrow = weather_tomorrow.get_temperature(unit=self.temp_unit)
-            temp_tomorrow_temp = temp_tomorrow['day']
-            temp_tomorrow_temp_max = temp_tomorrow['max']
-            temp_tomorrow_temp_min = temp_tomorrow['min']
-            temp_tomorrow_eve = temp_tomorrow['eve']
-            temp_tomorrow_morning = temp_tomorrow['morn']
-            temp_tomorrow_night = temp_tomorrow['night']
-            
-            pressure_tomorrow = weather_tomorrow.get_pressure()
-            pressure_tomorrow_press = pressure_tomorrow.get('press', None)
-            pressure_tomorrow_sea_level = pressure_tomorrow.get('sea_level', None)
-            
-            humidity_tomorrow = weather_tomorrow.get_humidity()
-
-            wind_tomorrow = weather_tomorrow.get_wind()
-            wind_tomorrow_deg = wind_tomorrow.get('all', None)
-            wind_tomorrow_speed = wind_tomorrow.get('speed', None)
-
-            snow_tomorrow = weather_tomorrow.get_snow()
-            snow_tomorrow = snow_tomorrow.get('all', None)
-            
-            rain_tomorrow = weather_tomorrow.get_rain()
-            rain_tomorrow = rain_tomorrow.get('all', None)
-
-            clouds_coverage_tomorrow = weather_tomorrow.get_clouds()
-
+            tomorrow = datetime.now() + timedelta(days=1)
+            tomorrow = tomorrow.strftime('%A').lower()
             today = datetime.now().strftime('%A').lower()
             
-            # Daily forecast
             daily_forecasts = dict()
-            weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', today]
+            weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', today, tomorrow]
             forecasts = forecast.get_forecast()
             for weather in forecasts.get_weathers():
                 for day in weekdays:
@@ -145,10 +119,13 @@ class Openweathermap(NeuronModule):
                                         'forecast_wind': weather.get_wind(),
                                         'forecast_pressure': weather.get_pressure(),
                                         'forecast_rain': weather.get_rain(),
-                                        'forecast_snow': weather.get_snow()
+                                        'forecast_snow': weather.get_snow(),
+                                        'forecast_clouds': weather.get_clouds()
                                         }
                         if today == day:
                             daily_forecasts.update({'today': data_for_day})
+                        if tomorrow == day:
+                            daily_forecasts.update({'tomorrow' : data_for_day})
                         daily_forecasts.update({day: data_for_day})
 
             message = {
@@ -173,25 +150,8 @@ class Openweathermap(NeuronModule):
                     "clouds_coverage": clouds_coverage_current,
                 },
 
-                "tomorrow": {
-                    "weather_status": weather_tomorrow_status,
-                    "temp": int(round(temp_tomorrow_temp)),
-                    "max_temp": int(round(temp_tomorrow_temp_max)),
-                    "min_temp": int(round(temp_tomorrow_temp_min)),
-                    "evening_temp": int(round(temp_tomorrow_eve)),
-                    "morning_temp": int(round(temp_tomorrow_night)),
-                    "night_temp": int(round(temp_tomorrow_morning)),
-                    "pressure": pressure_tomorrow_press,
-                    "sea_level": pressure_tomorrow_sea_level,
-                    "humidity": humidity_tomorrow,
-                    "wind_deg": wind_tomorrow_deg,
-                    "wind_speed": wind_tomorrow_speed,
-                    "snowfall": snow_tomorrow,
-                    "rainfall": rain_tomorrow,
-                    "clouds_coverage": clouds_coverage_tomorrow,
-                },
-
                 "today": get_weather_forecast(daily_forecasts, "today"),
+                "tomorrow": get_weather_forecast(daily_forecasts, "tomorrow"),
                 "monday": get_weather_forecast(daily_forecasts, "monday"),
                 "tuesday": get_weather_forecast(daily_forecasts, "tuesday"),
                 "wednesday": get_weather_forecast(daily_forecasts, "wednesday"),

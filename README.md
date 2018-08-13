@@ -61,6 +61,7 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 | sea_level      | The expected sea level pressure in hpa   | Float  | None                 |
 | rainfall       | The expected rainfall volume             | Float  | 13.76                |
 | snowfall       | The expected snowfall volume             | Float  | None                 |
+| clouds_coverage| The expected cloud coverage in percent   | Float  | 65                   |
 
 ## Forecast
 To get the forecast for each day of the week, replace today with: monday, tuesday, wednesday, thursday, friday, saturday or sunday
@@ -112,7 +113,7 @@ Forecast example for monday
       - openweathermap:
           api_key: "fdfba4097c318aed7836b2a85a6a05ef"
           lang: "en"
-          location: "{{ location }}"
+          location: "grenoble"
           say_template: "The weather on Monday will be {{ monday['weather_status'] }} with temperatures from  {{ monday['min_temp'] }}  to  {{ monday['max_temp'] }} degree"
 ```
 
