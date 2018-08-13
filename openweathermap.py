@@ -53,13 +53,12 @@ class Openweathermap(NeuronModule):
             extended_location = self.location
             if self.country is not None:
                 self.extended_location = self.location + "," + self.country
-
             owm = pyowm.OWM(API_key=self.api_key, language=self.lang)
             
             # Current 
             try: 
                 observation = owm.weather_at_place(extended_location)
-            except:
+            except pyowm.exceptions.api_response_error.NotFoundError:
                 raise MissingParameterException("OpenWeatherMap did not find the location %s" % self.location)
             weather_current = observation.get_weather()
             
