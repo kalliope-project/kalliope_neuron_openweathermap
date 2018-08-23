@@ -118,9 +118,9 @@ class Openweathermap(NeuronModule):
         returned_dict["sunset"] = datetime.fromtimestamp(weather_current.get_sunset_time()).strftime(time_format)
         returned_dict["sunrise"] = datetime.fromtimestamp(weather_current.get_sunrise_time()).strftime(time_format)
 
-        returned_dict["temperature "] = int(round(weather_current.get_temperature(unit=self.temp_unit)["temp"]))
-        returned_dict["temperature_min "] = int(round(weather_current.get_temperature(unit=self.temp_unit)["temp_min"]))
-        returned_dict["temperature_max "] = int(round(weather_current.get_temperature(unit=self.temp_unit)["temp_max"]))
+        returned_dict["temperature"] = int(round(weather_current.get_temperature(unit=self.temp_unit)["temp"]))
+        returned_dict["temperature_min"] = int(round(weather_current.get_temperature(unit=self.temp_unit)["temp_min"]))
+        returned_dict["temperature_max"] = int(round(weather_current.get_temperature(unit=self.temp_unit)["temp_max"]))
 
         returned_dict["pressure"] = weather_current.get_pressure()["press"]
         returned_dict["sea_level_pressure"] = weather_current.get_pressure()["sea_level"]
