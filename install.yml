@@ -6,4 +6,6 @@
 
   tasks:
     - name: "Install pip dependencies"
-      shell: "pip3 install 'pyowm==2.10.0'"
+      pip:
+        name: "pyowm==2.10.0"
+        executable: pip3
