@@ -1,13 +1,8 @@
-import sys
 import pyowm
 from datetime import datetime, timedelta
 
 from kalliope.core.NeuronModule import NeuronModule, MissingParameterException, InvalidParameterException
 from pyowm.exceptions.api_response_error import UnauthorizedError, NotFoundError
-
-if sys.version_info < (3, 0):
-    reload(sys)
-    sys.setdefaultencoding('utf8')
 
 
 class Openweathermap(NeuronModule):
@@ -38,7 +33,7 @@ class Openweathermap(NeuronModule):
         # search for current weather the provided place
         try:
             observation = owm.weather_at_place(extended_location)
-        except UnauthorizedError, e:
+        except UnauthorizedError as e:
             raise MissingParameterException("OpenWeatherMap crashed and reported %s" % e)
         except NotFoundError:
             raise MissingParameterException("OpenWeatherMap did not find the location %s" % self.location)
@@ -81,8 +76,8 @@ class Openweathermap(NeuronModule):
         today = datetime.now().strftime('%A').lower()
         returned_message["today"] = daily_forecasts.get(today)
         returned_message["tomorrow"] = daily_forecasts.get(tomorrow)
-        import pprint
-        pprint.pprint(returned_message)
+        # import pprint
+        # pprint.pprint(returned_message)
         # forward the asked day to the template
         if self.day:
             returned_message.update({"day": self.day.lower()})

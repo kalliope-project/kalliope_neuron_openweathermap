@@ -6,6 +6,4 @@
 
   tasks:
     - name: "Install pip dependencies"
-      pip:
-        name: pyowm
-        version: 2.9.0
+      shell: "pip3 install 'pyowm==2.10.0'"
