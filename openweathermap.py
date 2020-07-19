@@ -25,7 +25,7 @@ class Openweathermap(NeuronModule):
         extended_location = self.location
 
         if self.country is not None:
-            self.extended_location = self.location + "," + self.country
+            extended_location = self.location + "," + self.country
 
         # connect with the api. this will work every time
         owm = pyowm.OWM(API_key=self.api_key, language=self.lang)
