@@ -45,14 +45,14 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 
 | Time values     |
 |-----------------|                                                 
-|'01:00'          |
-|'04:00'          |
-|'07:00'          |
-|'10:00'          |
-|'13:00'          |
-|'16:00'          |
-|'19:00'          |
-|'22:00'          |
+|'02:00'          |
+|'05:00'          |
+|'08:00'          |
+|'11:00'          |
+|'14:00'          |
+|'17:00'          |
+|'20:00'          |
+|'23:00'          |
 |'daily_forecast' |
 
 
@@ -95,7 +95,7 @@ Get the current weather
           location : "grenoble"
           country: "FR"
           say_template:
-          - "Today at {{ location }}, the weather is {{ current['weather_status'] }} with a temperature of {{ current['temperature'] }} degrees and tomorrow the weather will be {{ tomorrow['daily_forecast']['weather_status'] }} with temperatures in the morning from {{ tomorrow['07:00']['temperature'] }}  to  {{ tomorrow['19:00']['temperature'] }} degree in the evening"
+          - "Today at {{ location }}, the weather is {{ current['weather_status'] }} with a temperature of {{ current['temperature'] }} degrees and tomorrow the weather will be {{ tomorrow['daily_forecast']['weather_status'] }} with temperatures in the morning from {{ tomorrow['08:00']['temperature'] }}  to  {{ tomorrow['20:00']['temperature'] }} degree in the evening"
 ```
 
 Load the location from your order
@@ -139,7 +139,7 @@ Forecast example for tomorrow at for specific times
           temp_unit: "celsius"
           location : "grenoble"
           country: "FR"
-          say_template: "The weather tomorrow starts with {{ tomorrow['07:00']['weather_status'] }} in the morning, you can expect {{ tomorrow['13:00']['weather_status'] }} at the early afternoon and for the evening {{ tomorrow['19:00']['weather_status'] }}"
+          say_template: "The weather tomorrow starts with {{ tomorrow['08:00']['weather_status'] }} in the morning, you can expect {{ tomorrow['14:00']['weather_status'] }} at the early afternoon and for the evening {{ tomorrow['20:00']['weather_status'] }}"
 ```
 
 ## Templates example 
@@ -168,57 +168,57 @@ You need to set the day parameter to parse your day to the template.
 -%}
 
 {% if "today" == day_of_week  %} 
-    The weather today in the morning will be {{ today['07:00']['weather_status'] }} with temperatures from about {{ today['07:00']['temperature'] }} to {{ today['16:00']['temperature'] }} degree at afternoon
+    The weather today in the morning will be {{ today['08:00']['weather_status'] }} with temperatures from about {{ today['08:00']['temperature'] }} to {{ today['17:00']['temperature'] }} degree at afternoon
 
 {% elif "tomorrow" == day_of_week  %} 
-    The weather tomorrow will be {{ tomorrow['07:00']['weather_status'] }} with temperatures from about {{ tomorrow['07:00']['temperature'] }} to {{ tomorrow['16:00']['temperature'] }} degree at afternoon
+    The weather tomorrow will be {{ tomorrow['08:00']['weather_status'] }} with temperatures from about {{ tomorrow['08:00']['temperature'] }} to {{ tomorrow['17:00']['temperature'] }} degree at afternoon
 
     
 {% elif "monday" == day_of_week  %}
-    {% if monday['weather_status'] %}
-        The weather on Monday will be {{ monday['07:00']['weather_status'] }} with temperatures from about {{ monday['07:00']['temperature'] }} to {{ monday['16:00']['temperature'] }} degree at afternoon
+    {% if monday['08:00']['weather_status'] %}
+        The weather on Monday will be {{ monday['08:00']['weather_status'] }} with temperatures from about {{ monday['08:00']['temperature'] }} to {{ monday['17:00']['temperature'] }} degree at afternoon
     {% else %} 
         I'm sorry, there is no forecast for monday
     {% endif %}
     
 {% elif "tuesday" == day_of_week  %}
-    {% if tuesday['weather_status'] %} 
-        The weather on Tuesday will be {{ tuesday['07:00']['weather_status'] }} with temperatures from about {{ tuesday['07:00']['temperature'] }} to {{ tuesday['16:00']['temperature'] }} degree at afternoon
+    {% if tuesday['08:00']['weather_status'] %} 
+        The weather on Tuesday will be {{ tuesday['08:00']['weather_status'] }} with temperatures from about {{ tuesday['08:00']['temperature'] }} to {{ tuesday['17:00']['temperature'] }} degree at afternoon
     {% else %} 
         I'm sorry, there is no forecast for tuesday
     {% endif %}
     
 {% elif "wednesday" == day_of_week  %}
-    {% if wednesday['weather_status'] %}
-        The weather on Wednesday will be {{ wednesday['07:00']['weather_status'] }} with temperatures from about {{ wednesday['07:00']['temperature'] }} to {{ wednesday['16:00']['temperature'] }} degree at afternoon
+    {% if wednesday['08:00']['weather_status'] %}
+        The weather on Wednesday will be {{ wednesday['08:00']['weather_status'] }} with temperatures from about {{ wednesday['08:00']['temperature'] }} to {{ wednesday['17:00']['temperature'] }} degree at afternoon
     {% else %} 
         I'm sorry, there is no forecast for wednesday
     {% endif %}
     
 {% elif "thursday" == day_of_week %}
-    {% if thursday['weather_status'] %}
-        The weather on Thursday will be {{ thursday['07:00']['weather_status'] }} with temperatures from about {{ thursday['07:00']['temperature'] }} to {{ thursday['16:00']['temperature'] }} degree at afternoon
+    {% if thursday['08:00']['weather_status'] %}
+        The weather on Thursday will be {{ thursday['08:00']['weather_status'] }} with temperatures from about {{ thursday['08:00']['temperature'] }} to {{ thursday['17:00']['temperature'] }} degree at afternoon
     {% else %} 
         I'm sorry, there is no forecast for thursday
     {% endif %}
     
 {% elif "friday" == day_of_week  %}
-    {% if friday['weather_status'] %}
-        The weather on Friday will be {{ friday['07:00']['weather_status'] }} with temperatures from about {{ friday['07:00']['temperature'] }} to {{ friday['16:00']['temperature'] }} degree at afternoon
+    {% if friday['08:00']['weather_status'] %}
+        The weather on Friday will be {{ friday['08:00']['weather_status'] }} with temperatures from about {{ friday['08:00']['temperature'] }} to {{ friday['17:00']['temperature'] }} degree at afternoon
     {% else %} 
         I'm sorry, there is no forecast for friday
     {% endif %}
     
 {% elif "saturday" == day_of_week  %}
-    {% if saturday['weather_status'] %}
-        The weather on Saturday will be {{ saturday['07:00']['weather_status'] }} with temperatures from about {{ saturday['07:00']['temperature'] }} to {{ saturday['16:00']['temperature'] }} degree at afternoon
+    {% if saturday['08:00']['weather_status'] %}
+        The weather on Saturday will be {{ saturday['08:00']['weather_status'] }} with temperatures from about {{ saturday['08:00']['temperature'] }} to {{ saturday['17:00']['temperature'] }} degree at afternoon
     {% else %} 
         I'm sorry, there is no forecast for saturday
     {% endif %}
     
 {% elif "sunday" == day_of_week  %}
-    {% if sunday['weather_status'] %} 
-        The weather on Sunday will be {{ sunday['07:00']['weather_status'] }} with temperatures from about {{ sunday['07:00']['temperature'] }} to {{ sunday['16:00']['temperature'] }} degree at afternoon
+    {% if sunday['08:00']['weather_status'] %} 
+        The weather on Sunday will be {{ sunday['08:00']['weather_status'] }} with temperatures from about {{ sunday['08:00']['temperature'] }} to {{ sunday['17:00']['temperature'] }} degree at afternoon
     {% else %} 
         I'm sorry, there is no forecast for sunday
     {% endif %}
