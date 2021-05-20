@@ -2,6 +2,7 @@ from pyowm.owm import OWM
 from pyowm.utils.config import get_default_config
 from datetime import datetime, timedelta
 from kalliope.core.NeuronModule import NeuronModule, MissingParameterException, InvalidParameterException
+from time import sleep
 
 class Openweathermap(NeuronModule):
     def __init__(self, **kwargs):
@@ -46,28 +47,47 @@ class Openweathermap(NeuronModule):
         returned_message["longitude"] = location.lon
 
         mgr = owm.weather_manager()
-        current_weather = mgr.weather_at_place(location.name).weather
+
+        # in rare cases the neuron will failed to retrieve the data, we will retry 3 times, otherwise raise an exception
+        for a in range(3):
+            try:
+                # we make a one_call to retrieve the weather data for current weather, hourly for the next 48 hours and a daily forecast for the next 7 days
+                # see https://openweathermap.org/api/one-call-api
+                weather_data = mgr.one_call(location.lat, location.lon)
+            except Exception as e:
+                if a == 2:
+                    raise MissingParameterException("Openweathermap crashed and reported %s" % e)
+                sleep(1)
+                pass
 
         # get dict with current weather info
-        returned_message["current"] = self._get_dict_weather_data(current_weather)
+        returned_message["current"] = self._get_dict_weather_data(weather_data.current)
 
         # get all available forecast. This return a list of Weather object
         daily_forecast = dict()
 
-        for day_time in mgr.forecast_at_place(location.name, "3h").forecast:
-            time_object = datetime.fromtimestamp(day_time.reference_time())
+        # get a forecast for the next 48 hours
+        for hour in weather_data.forecast_hourly:
+            time_object = datetime.fromtimestamp(hour.reference_time())
             day_weather = time_object.strftime('%A').lower()
             hour_weather = time_object.strftime('%H:%M').lower()
+            if datetime.now().strftime("%Y-%m-%d") == time_object.strftime("%Y-%m-%d"):
+                day_weather = "today"
             if day_weather not in daily_forecast:
                 daily_forecast[day_weather] = dict()
-            daily_forecast[day_weather][hour_weather] = self._get_dict_weather_data(day_time)
+
+            daily_forecast[day_weather][hour_weather] = self._get_dict_weather_data(hour)
         
-        for daily in mgr.forecast_at_place(location.name, "daily").forecast:
-            time_object = datetime.fromtimestamp(daily.reference_time())
+        # get a daily forecast for the next 7 days
+        for day in weather_data.forecast_daily:
+            time_object = datetime.fromtimestamp(day.reference_time())
             day_weather = time_object.strftime('%A').lower()
+            if datetime.now().strftime("%Y-%m-%d") == time_object.strftime("%Y-%m-%d"):
+                day_weather = "today"
             if day_weather not in daily_forecast:
                 daily_forecast[day_weather] = dict()
-            daily_forecast[day_weather]["daily_forecast"] = self._get_dict_weather_data(daily)
+
+            daily_forecast[day_weather]["daily_forecast"] = self._get_dict_weather_data(day)
 
         returned_message.update(daily_forecast)
 
@@ -77,19 +97,16 @@ class Openweathermap(NeuronModule):
             if day not in returned_message:
                 returned_message[day] = None
 
-        # just to make the neuron simpler to use from the end user template, add a key for today and tomorrow
+        # just to make the neuron simpler to use from the end user template, add a key for tomorrow
         # that contains already reached data
         tomorrow = datetime.now() + timedelta(days=1)
-        tomorrow = tomorrow.strftime('%A').lower()
-        today = datetime.now().strftime('%A').lower()
-        returned_message["today"] = daily_forecast.get(today)
-        returned_message["tomorrow"] = daily_forecast.get(tomorrow)
+        returned_message["tomorrow"] = daily_forecast.get(tomorrow.strftime('%A').lower())
 
         # forward the asked day to the template
         if self.day:
             returned_message.update({"day": self.day.lower()})
         self.say(returned_message)
-
+    
     def _get_dict_weather_data(self, weather_data):
         """
         return a dict of current weather data from the observation object
@@ -169,6 +186,15 @@ class Openweathermap(NeuronModule):
             temp_max = int(round(_dict.get("temp_max")))
 
         return temp, temp_max, temp_min
+    
+    def _check_con(self, connection_to_check):
+        for a in range(4):
+            try:
+                return connection_to_check()
+            except Exception as e:
+                if a == 3:
+                    raise MissingParameterException("Openweathermap crashed and reported %s" % e)
+                pass
 
     def _is_parameters_ok(self):
         """

@@ -2,7 +2,7 @@
 
 ## Synopsis 
 
-Retrieve the weather for today, tomorrow or a forecast for 5 days at a specific day of the week with the related data (humidity, temperature, etc ...) for a given location. 
+Retrieve the weather for today, tomorrow or a forecast for 7 days for a specific day of the week with the related data (humidity, temperature, etc ...) for a given location. 
 
 ## Installation
 ```
@@ -17,10 +17,10 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 | location        | YES      | None       |                             | The location                                                                                               |
 | lang            | No       | en         |                             | Look for the supported languages [here](https://openweathermap.org/current#multi)                          |
 | temp_unit       | No       | celsius    | celsius, kelvin, fahrenheit |                                                                                                            |
-| wind_speed_unit | No       | meters_sec | meters_sec, miles_hour, km_hour, knots, beaufort |                                                                                                            |
+| wind_speed_unit | No       | meters_sec | meters_sec, miles_hour, km_hour, knots, beaufort |                                                                                       |
 | country         | No       | None       |                             | [ISO-3166 Country Code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2#Officially_assigned_code_elements)|
 | 12h_format      | no       | False      | True/False                  | To get 12 hour format for sunrise and sunset return value                                                  |
-| day             | No       | None       | today or a weekday          | Only needed if you want a single synapse to catch the day and translate it in a file_template (required)   |
+| day             | No       | None       | today, tomorrow or weekday  | Only needed if you want a single synapse to catch the day and translate it in a file_template (required)   |
 
 
 ## Return Values
@@ -41,17 +41,34 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 | saturday  | Dict of weather data for saturday         | Dict   | {'<time_value>': { <weather_data> }, {'<time_value>': { <weather_data> }} |
 | sunday    | Dict of weather data for sunday           | Dict   | {'<time_value>': { <weather_data> }, {'<time_value>': { <weather_data> }} |
 
+## Note:
+If today is Friday the 13th, the returned key `friday` is the key for the next week Friday the 20th.  
+
 **Dict of time_value**
+
+You can retrieve a hourly forecast for the next 48 hours, example:
+
+```yaml
+{{ tomorrow['08:00']['temperature'] }}
+{{ monday['22:00']['weather_status'] }}
+
+```
+Or for the next 7 days a daily forecast.
+
+```yaml
+{{ today['daily_forecast']['weather_status'] }}
+{{ monday['daily_forecast']['weather_status'] }}
+
+```
 
 | Time values     |
 |-----------------|                                                 
-|'02:00'          |
-|'05:00'          |
-|'08:00'          |
-|'11:00'          |
-|'14:00'          |
-|'17:00'          |
-|'20:00'          |
+|'00:00'          |
+|'01:00'          |
+|  .              | 
+|  .              |
+|  .              |
+|'22:00'          |
 |'23:00'          |
 |'daily_forecast' |
 
@@ -64,8 +81,8 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 | sunset             | Sunset time (only for daily_forecast and current weather)                                | String | 01:00                |
 | sunrise            | Sunrise time (only for daily_forecast and current weather)                               | String | sunrise              |
 | temperature        | The expected temperature                                                                 | Int    | 17                   |
-| temperature_max    | The expected max. temperature. If time_value then for 3 hours, except for daily_forecast | Int    | 20                   |
-| temperature_min    | The expected min. temperature. If time_value then for 3 hours, except for daily_forecast | Int    | 11                   |
+| temperature_max    | The expected max. temperature. Only for daily_forecast                                   | Int    | 20                   |
+| temperature_min    | The expected min. temperature. Only for daily_forecast                                   | Int    | 11                   |
 | pressure           | The expected pressure in hectopascals                                                    | Float  | 857.32               |
 | sea_level_pressure | The expected sea level pressure in hpa                                                   | Float  | 627.25               |
 | humidity           | The expected humidity in percent                                                         | Float  | 63                   |
@@ -79,14 +96,13 @@ kalliope install --git-url https://github.com/kalliope-project/kalliope_neuron_o
 ## Note:
 It is possible that some data are not available. The value for a key will be None in this case.
 
-
 ## Synapses example
 
 Get the current weather
 ```yaml
   - name: "get-the-weather"
     signals:
-      - order: "what weather is it"
+      - order: "what is the weather like"
     neurons:
       - openweathermap:
           api_key: "fdfba4097c318aed7836b2a85a6a05ef"
@@ -150,7 +166,6 @@ The current weather in {{ location }} is {{ current['weather_status'] }} with a 
 
 ## Template and synapse example to get the forecast of a specific day with a single synapse
 
-We only get a forecast for 5 days, so if you ask for a day which is not in range it returns no data, for this case you can use a file template. 
 You need to set the day parameter to parse your day to the template. 
 
 ```
@@ -168,60 +183,31 @@ You need to set the day parameter to parse your day to the template.
 -%}
 
 {% if "today" == day_of_week  %} 
-    The weather today in the morning will be {{ today['08:00']['weather_status'] }} with temperatures from about {{ today['08:00']['temperature'] }} to {{ today['17:00']['temperature'] }} degree at afternoon
+    The weather today will be {{ today['daily_forecast']['weather_status'] }} with temperatures from about {{ today['daily_forecast']['temperature_min'] }} to {{ today['daily_forecast']['temperature_max'] }} degree.
 
 {% elif "tomorrow" == day_of_week  %} 
-    The weather tomorrow will be {{ tomorrow['08:00']['weather_status'] }} with temperatures from about {{ tomorrow['08:00']['temperature'] }} to {{ tomorrow['17:00']['temperature'] }} degree at afternoon
-
+    The weather tomorrow will be {{ tomorrow['daily_forecast']['weather_status'] }} with temperatures from about {{ tomorrow['daily_forecast']['temperature_min'] }} to {{ tomorrow['daily_forecast']['temperature_max'] }} degree at afternoon
     
 {% elif "monday" == day_of_week  %}
-    {% if monday['08:00']['weather_status'] %}
-        The weather on Monday will be {{ monday['08:00']['weather_status'] }} with temperatures from about {{ monday['08:00']['temperature'] }} to {{ monday['17:00']['temperature'] }} degree at afternoon
-    {% else %} 
-        I'm sorry, there is no forecast for monday
-    {% endif %}
+    The weather on Monday will be {{ monday['daily_forecast']['weather_status'] }} with temperatures from about {{ monday['daily_forecast']['temperature_min'] }} to {{ monday['daily_forecast']['temperature_max'] }} degree at afternoon
     
 {% elif "tuesday" == day_of_week  %}
-    {% if tuesday['08:00']['weather_status'] %} 
-        The weather on Tuesday will be {{ tuesday['08:00']['weather_status'] }} with temperatures from about {{ tuesday['08:00']['temperature'] }} to {{ tuesday['17:00']['temperature'] }} degree at afternoon
-    {% else %} 
-        I'm sorry, there is no forecast for tuesday
-    {% endif %}
-    
+      The weather on Tuesday will be {{ tuesday['daily_forecast']['weather_status'] }} with temperatures from about {{ tuesday['daily_forecast']['temperature_min'] }} to {{ tuesday['daily_forecast']['temperature_max'] }} degree at afternoon
+
 {% elif "wednesday" == day_of_week  %}
-    {% if wednesday['08:00']['weather_status'] %}
-        The weather on Wednesday will be {{ wednesday['08:00']['weather_status'] }} with temperatures from about {{ wednesday['08:00']['temperature'] }} to {{ wednesday['17:00']['temperature'] }} degree at afternoon
-    {% else %} 
-        I'm sorry, there is no forecast for wednesday
-    {% endif %}
+      The weather on Wednesday will be {{ wednesday['daily_forecast']['weather_status'] }} with temperatures from about {{ wednesday['daily_forecast']['temperature_min'] }} to {{ wednesday['daily_forecast']['temperature_max'] }} degree at afternoon
     
 {% elif "thursday" == day_of_week %}
-    {% if thursday['08:00']['weather_status'] %}
-        The weather on Thursday will be {{ thursday['08:00']['weather_status'] }} with temperatures from about {{ thursday['08:00']['temperature'] }} to {{ thursday['17:00']['temperature'] }} degree at afternoon
-    {% else %} 
-        I'm sorry, there is no forecast for thursday
-    {% endif %}
-    
+      The weather on Thursday will be {{ thursday['daily_forecast']['weather_status'] }} with temperatures from about {{ thursday['daily_forecast']['temperature_min'] }} to {{ thursday['daily_forecast']['temperature_max'] }} degree at afternoon
+
 {% elif "friday" == day_of_week  %}
-    {% if friday['08:00']['weather_status'] %}
-        The weather on Friday will be {{ friday['08:00']['weather_status'] }} with temperatures from about {{ friday['08:00']['temperature'] }} to {{ friday['17:00']['temperature'] }} degree at afternoon
-    {% else %} 
-        I'm sorry, there is no forecast for friday
-    {% endif %}
-    
+      The weather on Friday will be {{ friday['daily_forecast']['weather_status'] }} with temperatures from about {{ friday['daily_forecast']['temperature_min'] }} to {{ friday['daily_forecast']['temperature_max'] }} degree at afternoon
+
 {% elif "saturday" == day_of_week  %}
-    {% if saturday['08:00']['weather_status'] %}
-        The weather on Saturday will be {{ saturday['08:00']['weather_status'] }} with temperatures from about {{ saturday['08:00']['temperature'] }} to {{ saturday['17:00']['temperature'] }} degree at afternoon
-    {% else %} 
-        I'm sorry, there is no forecast for saturday
-    {% endif %}
+      The weather on Saturday will be {{ saturday['daily_forecast']['weather_status'] }} with temperatures from about {{ saturday['daily_forecast']['temperature_min'] }} to {{ saturday['daily_forecast']['temperature_max'] }} degree at afternoon
     
-{% elif "sunday" == day_of_week  %}
-    {% if sunday['08:00']['weather_status'] %} 
-        The weather on Sunday will be {{ sunday['08:00']['weather_status'] }} with temperatures from about {{ sunday['08:00']['temperature'] }} to {{ sunday['17:00']['temperature'] }} degree at afternoon
-    {% else %} 
-        I'm sorry, there is no forecast for sunday
-    {% endif %}
+{% elif "sunday" == day_of_week  %} 
+    The weather on Sunday will be {{ sunday['daily_forecast']['weather_status'] }} with temperatures from about {{ sunday['daily_forecast']['temperature_min'] }} to {{ sunday['daily_forecast']['temperature_max'] }} degree at afternoon.
 
 {% endif %}
 ```
@@ -341,1005 +327,1340 @@ Example synapse for wind speed
 
 ```json
 {
- "location": "Grenoble",
- "latitude": 45.166672,
- "longitude": 5.71667,
- "current": {
-  "weather_status": "overcast clouds",
-  "sunset": "20:56",
-  "sunrise": "06:09",
-  "temperature": 7,
-  "temperature_min": 6,
-  "temperature_max": 13,
-  "pressure": 1011,
-  "sea_level_pressure": 1011,
-  "humidity": 79,
-  "wind_deg": 335,
-  "wind_speed": 2.58,
-  "snow": null,
-  "rainfall": null,
-  "clouds_coverage": 96
- },
- "thursday": {
-  "17:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 7,
-   "temperature_min": 7,
-   "temperature_max": 7,
-   "pressure": 1010,
-   "sea_level_pressure": 1010,
-   "humidity": 72,
-   "wind_deg": 338,
-   "wind_speed": 2.57,
-   "snow": null,
-   "rainfall": 0.14,
-   "clouds_coverage": 83
-  },
-  "20:00": {
-   "weather_status": "broken clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 6,
-   "temperature_min": 5,
-   "temperature_max": 6,
-   "pressure": 1010,
-   "sea_level_pressure": 1010,
-   "humidity": 77,
-   "wind_deg": 327,
-   "wind_speed": 1.5,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 57
-  },
-  "23:00": {
-   "weather_status": "scattered clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 1,
-   "temperature_min": 1,
-   "temperature_max": 1,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 90,
-   "wind_deg": 105,
-   "wind_speed": 1.47,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 30
-  },
-  "daily_forecast": {
-   "weather_status": "rain and snow",
-   "sunset": "20:56",
-   "sunrise": "06:09",
-   "temperature": 6,
-   "temperature_min": 0,
-   "temperature_max": 7,
-   "pressure": 1011,
-   "sea_level_pressure": null,
-   "humidity": 82,
-   "wind_deg": 336,
-   "wind_speed": 2.61,
-   "snow": 0.25,
-   "rainfall": 5.03,
-   "clouds_coverage": 96
-  }
- },
- "friday": {
-  "02:00": {
-   "weather_status": "scattered clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 0,
-   "temperature_min": 0,
-   "temperature_max": 0,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 87,
-   "wind_deg": 119,
-   "wind_speed": 1.68,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 35
-  },
-  "05:00": {
-   "weather_status": "scattered clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": -1,
-   "temperature_min": -1,
-   "temperature_max": -1,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 83,
-   "wind_deg": 107,
-   "wind_speed": 1.34,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 46
-  },
-  "08:00": {
-   "weather_status": "broken clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 2,
-   "temperature_min": 2,
-   "temperature_max": 2,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 71,
-   "wind_deg": 348,
-   "wind_speed": 1.41,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 64
-  },
-  "11:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 6,
-   "temperature_min": 6,
-   "temperature_max": 6,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 69,
-   "wind_deg": 324,
-   "wind_speed": 2.41,
-   "snow": null,
-   "rainfall": 0.11,
-   "clouds_coverage": 99
-  },
-  "14:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 89,
-   "wind_deg": 318,
-   "wind_speed": 2.71,
-   "snow": null,
-   "rainfall": 1.09,
-   "clouds_coverage": 97
-  },
-  "17:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 85,
-   "wind_deg": 337,
-   "wind_speed": 2.55,
-   "snow": null,
-   "rainfall": 0.47,
-   "clouds_coverage": 99
-  },
-  "20:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1013,
-   "sea_level_pressure": 1013,
-   "humidity": 87,
-   "wind_deg": 354,
-   "wind_speed": 2.12,
-   "snow": null,
-   "rainfall": 0.28,
-   "clouds_coverage": 86
-  },
-  "23:00": {
-   "weather_status": "scattered clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 1,
-   "temperature_min": 1,
-   "temperature_max": 1,
-   "pressure": 1016,
-   "sea_level_pressure": 1016,
-   "humidity": 92,
-   "wind_deg": 57,
-   "wind_speed": 1.19,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 36
-  },
-  "daily_forecast": {
-   "weather_status": "rain and snow",
-   "sunset": "20:57",
-   "sunrise": "06:08",
-   "temperature": 5,
-   "temperature_min": -1,
-   "temperature_max": 6,
-   "pressure": 1011,
-   "sea_level_pressure": null,
-   "humidity": 82,
-   "wind_deg": 319,
-   "wind_speed": 2.85,
-   "snow": 0.12,
-   "rainfall": 1.62,
-   "clouds_coverage": 97
-  }
- },
- "saturday": {
-  "02:00": {
-   "weather_status": "broken clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 0,
-   "temperature_min": 0,
-   "temperature_max": 0,
-   "pressure": 1016,
-   "sea_level_pressure": 1016,
-   "humidity": 86,
-   "wind_deg": 83,
-   "wind_speed": 1.12,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 68
-  },
-  "05:00": {
-   "weather_status": "overcast clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 1,
-   "temperature_min": 1,
-   "temperature_max": 1,
-   "pressure": 1014,
-   "sea_level_pressure": 1014,
-   "humidity": 79,
-   "wind_deg": 148,
-   "wind_speed": 1.13,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 100
-  },
-  "08:00": {
-   "weather_status": "overcast clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 3,
-   "temperature_min": 3,
-   "temperature_max": 3,
-   "pressure": 1013,
-   "sea_level_pressure": 1013,
-   "humidity": 75,
-   "wind_deg": 168,
-   "wind_speed": 1.69,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 100
-  },
-  "11:00": {
-   "weather_status": "overcast clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 6,
-   "temperature_min": 6,
-   "temperature_max": 6,
-   "pressure": 1013,
-   "sea_level_pressure": 1013,
-   "humidity": 64,
-   "wind_deg": 221,
-   "wind_speed": 2.16,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 100
-  },
-  "14:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 3,
-   "temperature_min": 3,
-   "temperature_max": 3,
-   "pressure": 1014,
-   "sea_level_pressure": 1014,
-   "humidity": 94,
-   "wind_deg": 191,
-   "wind_speed": 2.19,
-   "snow": null,
-   "rainfall": 1.13,
-   "clouds_coverage": 100
-  },
-  "17:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 3,
-   "temperature_min": 3,
-   "temperature_max": 3,
-   "pressure": 1013,
-   "sea_level_pressure": 1013,
-   "humidity": 97,
-   "wind_deg": 165,
-   "wind_speed": 1.83,
-   "snow": null,
-   "rainfall": 2.75,
-   "clouds_coverage": 100
-  },
-  "20:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1013,
-   "sea_level_pressure": 1013,
-   "humidity": 98,
-   "wind_deg": 173,
-   "wind_speed": 1.75,
-   "snow": null,
-   "rainfall": 2.51,
-   "clouds_coverage": 100
-  },
-  "23:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1014,
-   "sea_level_pressure": 1014,
-   "humidity": 98,
-   "wind_deg": 159,
-   "wind_speed": 1.45,
-   "snow": null,
-   "rainfall": 2.8,
-   "clouds_coverage": 100
-  },
-  "daily_forecast": {
-   "weather_status": "light rain",
-   "sunset": "20:58",
-   "sunrise": "06:07",
-   "temperature": 3,
-   "temperature_min": 0,
-   "temperature_max": 6,
-   "pressure": 1014,
-   "sea_level_pressure": null,
-   "humidity": 94,
-   "wind_deg": 191,
-   "wind_speed": 2.19,
-   "snow": null,
-   "rainfall": 9.19,
-   "clouds_coverage": 100
-  }
- },
- "sunday": {
-  "02:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 97,
-   "wind_deg": 148,
-   "wind_speed": 1.26,
-   "snow": null,
-   "rainfall": 0.47,
-   "clouds_coverage": 100
-  },
-  "05:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 98,
-   "wind_deg": 157,
-   "wind_speed": 1.87,
-   "snow": null,
-   "rainfall": 2.62,
-   "clouds_coverage": 100
-  },
-  "08:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 5,
-   "temperature_min": 5,
-   "temperature_max": 5,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 96,
-   "wind_deg": 150,
-   "wind_speed": 1.6,
-   "snow": null,
-   "rainfall": 0.84,
-   "clouds_coverage": 100
-  },
-  "11:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 8,
-   "temperature_min": 8,
-   "temperature_max": 8,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 88,
-   "wind_deg": 217,
-   "wind_speed": 2.22,
-   "snow": null,
-   "rainfall": 0.74,
-   "clouds_coverage": 100
-  },
-  "14:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 9,
-   "temperature_min": 9,
-   "temperature_max": 9,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 79,
-   "wind_deg": 213,
-   "wind_speed": 2.66,
-   "snow": null,
-   "rainfall": 0.79,
-   "clouds_coverage": 100
-  },
-  "17:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 8,
-   "temperature_min": 8,
-   "temperature_max": 8,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 91,
-   "wind_deg": 210,
-   "wind_speed": 1.91,
-   "snow": null,
-   "rainfall": 2.63,
-   "clouds_coverage": 100
-  },
-  "20:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 6,
-   "temperature_min": 6,
-   "temperature_max": 6,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 96,
-   "wind_deg": 235,
-   "wind_speed": 1.28,
-   "snow": null,
-   "rainfall": 2.33,
-   "clouds_coverage": 100
-  },
-  "23:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1014,
-   "sea_level_pressure": 1014,
-   "humidity": 97,
-   "wind_deg": 307,
-   "wind_speed": 0.34,
-   "snow": null,
-   "rainfall": 0.58,
-   "clouds_coverage": 88
-  },
-  "daily_forecast": {
-   "weather_status": "light rain",
-   "sunset": "20:59",
-   "sunrise": "06:06",
-   "temperature": 9,
-   "temperature_min": 4,
-   "temperature_max": 9,
-   "pressure": 1011,
-   "sea_level_pressure": null,
-   "humidity": 79,
-   "wind_deg": 213,
-   "wind_speed": 2.66,
-   "snow": null,
-   "rainfall": 11,
-   "clouds_coverage": 100
-  }
- },
- "monday": {
-  "02:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 3,
-   "temperature_min": 3,
-   "temperature_max": 3,
-   "pressure": 1015,
-   "sea_level_pressure": 1015,
-   "humidity": 96,
-   "wind_deg": 276,
-   "wind_speed": 0.38,
-   "snow": null,
-   "rainfall": 0.22,
-   "clouds_coverage": 80
-  },
-  "05:00": {
-   "weather_status": "broken clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 1,
-   "temperature_min": 1,
-   "temperature_max": 1,
-   "pressure": 1015,
-   "sea_level_pressure": 1015,
-   "humidity": 97,
-   "wind_deg": 85,
-   "wind_speed": 0.76,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 74
-  },
-  "08:00": {
-   "weather_status": "broken clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 3,
-   "temperature_min": 3,
-   "temperature_max": 3,
-   "pressure": 1015,
-   "sea_level_pressure": 1015,
-   "humidity": 94,
-   "wind_deg": 302,
-   "wind_speed": 1.07,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 56
-  },
-  "11:00": {
-   "weather_status": "scattered clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 7,
-   "temperature_min": 7,
-   "temperature_max": 7,
-   "pressure": 1013,
-   "sea_level_pressure": 1013,
-   "humidity": 64,
-   "wind_deg": 297,
-   "wind_speed": 2.04,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 30
-  },
-  "14:00": {
-   "weather_status": "few clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 10,
-   "temperature_min": 10,
-   "temperature_max": 10,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 42,
-   "wind_deg": 323,
-   "wind_speed": 2.69,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 20
-  },
-  "17:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 9,
-   "temperature_min": 9,
-   "temperature_max": 9,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 49,
-   "wind_deg": 309,
-   "wind_speed": 2.74,
-   "snow": null,
-   "rainfall": 0.12,
-   "clouds_coverage": 58
-  },
-  "20:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1015,
-   "sea_level_pressure": 1015,
-   "humidity": 91,
-   "wind_deg": 310,
-   "wind_speed": 1.96,
-   "snow": null,
-   "rainfall": 1.5,
-   "clouds_coverage": 75
-  },
-  "23:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 2,
-   "temperature_min": 2,
-   "temperature_max": 2,
-   "pressure": 1018,
-   "sea_level_pressure": 1018,
-   "humidity": 97,
-   "wind_deg": 311,
-   "wind_speed": 1.49,
-   "snow": null,
-   "rainfall": 2.46,
-   "clouds_coverage": 100
-  },
-  "daily_forecast": {
-   "weather_status": "light rain",
-   "sunset": "21:01",
-   "sunrise": "06:05",
-   "temperature": 10,
-   "temperature_min": 1,
-   "temperature_max": 10,
-   "pressure": 1012,
-   "sea_level_pressure": null,
-   "humidity": 42,
-   "wind_deg": 309,
-   "wind_speed": 2.74,
-   "snow": null,
-   "rainfall": 4.3,
-   "clouds_coverage": 20
-  }
- },
- "tuesday": {
-  "02:00": {
-   "weather_status": "moderate rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 2,
-   "temperature_min": 2,
-   "temperature_max": 2,
-   "pressure": 1019,
-   "sea_level_pressure": 1019,
-   "humidity": 99,
-   "wind_deg": 318,
-   "wind_speed": 1.82,
-   "snow": null,
-   "rainfall": 4.76,
-   "clouds_coverage": 100
-  },
-  "05:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 1,
-   "temperature_min": 1,
-   "temperature_max": 1,
-   "pressure": 1020,
-   "sea_level_pressure": 1020,
-   "humidity": 98,
-   "wind_deg": 332,
-   "wind_speed": 1.92,
-   "snow": null,
-   "rainfall": 1.44,
-   "clouds_coverage": 100
-  },
-  "08:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 1,
-   "temperature_min": 1,
-   "temperature_max": 1,
-   "pressure": 1021,
-   "sea_level_pressure": 1021,
-   "humidity": 98,
-   "wind_deg": 336,
-   "wind_speed": 2.27,
-   "snow": null,
-   "rainfall": 0.87,
-   "clouds_coverage": 100
-  },
-  "11:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 1,
-   "temperature_min": 1,
-   "temperature_max": 1,
-   "pressure": 1023,
-   "sea_level_pressure": 1023,
-   "humidity": 98,
-   "wind_deg": 339,
-   "wind_speed": 2.13,
-   "snow": null,
-   "rainfall": 0.86,
-   "clouds_coverage": 100
-  },
-  "14:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 3,
-   "temperature_min": 3,
-   "temperature_max": 3,
-   "pressure": 1023,
-   "sea_level_pressure": 1023,
-   "humidity": 91,
-   "wind_deg": 346,
-   "wind_speed": 2.6,
-   "snow": null,
-   "rainfall": 0.34,
-   "clouds_coverage": 100
-  },
-  "daily_forecast": {
-   "weather_status": "moderate rain",
-   "sunset": "21:02",
-   "sunrise": "06:04",
-   "temperature": 3,
-   "temperature_min": 0,
-   "temperature_max": 7,
-   "pressure": 1023,
-   "sea_level_pressure": null,
-   "humidity": 91,
-   "wind_deg": 343,
-   "wind_speed": 3.22,
-   "snow": null,
-   "rainfall": 8.45,
-   "clouds_coverage": 100
-  }
- },
- "wednesday": {
-  "daily_forecast": {
-   "weather_status": "overcast clouds",
-   "sunset": "21:03",
-   "sunrise": "06:03",
-   "temperature": 13,
-   "temperature_min": -1,
-   "temperature_max": 14,
-   "pressure": 1021,
-   "sea_level_pressure": null,
-   "humidity": 60,
-   "wind_deg": 328,
-   "wind_speed": 1.92,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 98
-  }
- },
- "today": {
-  "17:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 7,
-   "temperature_min": 7,
-   "temperature_max": 7,
-   "pressure": 1010,
-   "sea_level_pressure": 1010,
-   "humidity": 72,
-   "wind_deg": 338,
-   "wind_speed": 2.57,
-   "snow": null,
-   "rainfall": 0.14,
-   "clouds_coverage": 83
-  },
-  "20:00": {
-   "weather_status": "broken clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 6,
-   "temperature_min": 5,
-   "temperature_max": 6,
-   "pressure": 1010,
-   "sea_level_pressure": 1010,
-   "humidity": 77,
-   "wind_deg": 327,
-   "wind_speed": 1.5,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 57
-  },
-  "23:00": {
-   "weather_status": "scattered clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 1,
-   "temperature_min": 1,
-   "temperature_max": 1,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 90,
-   "wind_deg": 105,
-   "wind_speed": 1.47,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 30
-  },
-  "daily_forecast": {
-   "weather_status": "rain and snow",
-   "sunset": "20:56",
-   "sunrise": "06:09",
-   "temperature": 6,
-   "temperature_min": 0,
-   "temperature_max": 7,
-   "pressure": 1011,
-   "sea_level_pressure": null,
-   "humidity": 82,
-   "wind_deg": 336,
-   "wind_speed": 2.61,
-   "snow": 0.25,
-   "rainfall": 5.03,
-   "clouds_coverage": 96
-  }
- },
- "tomorrow": {
-  "02:00": {
-   "weather_status": "scattered clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 0,
-   "temperature_min": 0,
-   "temperature_max": 0,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 87,
-   "wind_deg": 119,
-   "wind_speed": 1.68,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 35
-  },
-  "05:00": {
-   "weather_status": "scattered clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": -1,
-   "temperature_min": -1,
-   "temperature_max": -1,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 83,
-   "wind_deg": 107,
-   "wind_speed": 1.34,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 46
-  },
-  "08:00": {
-   "weather_status": "broken clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 2,
-   "temperature_min": 2,
-   "temperature_max": 2,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 71,
-   "wind_deg": 348,
-   "wind_speed": 1.41,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 64
-  },
-  "11:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 6,
-   "temperature_min": 6,
-   "temperature_max": 6,
-   "pressure": 1011,
-   "sea_level_pressure": 1011,
-   "humidity": 69,
-   "wind_deg": 324,
-   "wind_speed": 2.41,
-   "snow": null,
-   "rainfall": 0.11,
-   "clouds_coverage": 99
-  },
-  "14:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 89,
-   "wind_deg": 318,
-   "wind_speed": 2.71,
-   "snow": null,
-   "rainfall": 1.09,
-   "clouds_coverage": 97
-  },
-  "17:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1012,
-   "sea_level_pressure": 1012,
-   "humidity": 85,
-   "wind_deg": 337,
-   "wind_speed": 2.55,
-   "snow": null,
-   "rainfall": 0.47,
-   "clouds_coverage": 99
-  },
-  "20:00": {
-   "weather_status": "light rain",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 4,
-   "temperature_min": 4,
-   "temperature_max": 4,
-   "pressure": 1013,
-   "sea_level_pressure": 1013,
-   "humidity": 87,
-   "wind_deg": 354,
-   "wind_speed": 2.12,
-   "snow": null,
-   "rainfall": 0.28,
-   "clouds_coverage": 86
-  },
-  "23:00": {
-   "weather_status": "scattered clouds",
-   "sunset": null,
-   "sunrise": null,
-   "temperature": 1,
-   "temperature_min": 1,
-   "temperature_max": 1,
-   "pressure": 1016,
-   "sea_level_pressure": 1016,
-   "humidity": 92,
-   "wind_deg": 57,
-   "wind_speed": 1.19,
-   "snow": null,
-   "rainfall": null,
-   "clouds_coverage": 36
-  },
-  "daily_forecast": {
-   "weather_status": "rain and snow",
-   "sunset": "20:57",
-   "sunrise": "06:08",
-   "temperature": 5,
-   "temperature_min": -1,
-   "temperature_max": 6,
-   "pressure": 1011,
-   "sea_level_pressure": null,
-   "humidity": 82,
-   "wind_deg": 319,
-   "wind_speed": 2.85,
-   "snow": 0.12,
-   "rainfall": 1.62,
-   "clouds_coverage": 97
-  }
- }
+    "location": "Paris",
+    "latitude": 48.853401,
+    "longitude": 2.3486,
+    "current": {
+        "weather_status": "broken clouds",
+        "sunset": "21:31",
+        "sunrise": "06:02",
+        "temperature": 17,
+        "temperature_min": null,
+        "temperature_max": null,
+        "pressure": 1017,
+        "sea_level_pressure": null,
+        "humidity": 58,
+        "wind_deg": 98,
+        "wind_speed": 4.02,
+        "snow": null,
+        "rainfall": null,
+        "clouds_coverage": 75
+    },
+    "today": {
+        "15:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 17,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1017,
+            "sea_level_pressure": null,
+            "humidity": 56,
+            "wind_deg": 206,
+            "wind_speed": 5.77,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 80
+        },
+        "16:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 17,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1017,
+            "sea_level_pressure": null,
+            "humidity": 58,
+            "wind_deg": 207,
+            "wind_speed": 5.19,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 75
+        },
+        "17:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 17,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1017,
+            "sea_level_pressure": null,
+            "humidity": 57,
+            "wind_deg": 205,
+            "wind_speed": 5.3,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 80
+        },
+        "18:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 17,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1017,
+            "sea_level_pressure": null,
+            "humidity": 56,
+            "wind_deg": 208,
+            "wind_speed": 5.82,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 85
+        },
+        "19:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 17,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1016,
+            "sea_level_pressure": null,
+            "humidity": 58,
+            "wind_deg": 207,
+            "wind_speed": 6.01,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 90
+        },
+        "20:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 16,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1015,
+            "sea_level_pressure": null,
+            "humidity": 60,
+            "wind_deg": 209,
+            "wind_speed": 5.96,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 95
+        },
+        "21:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1014,
+            "sea_level_pressure": null,
+            "humidity": 63,
+            "wind_deg": 206,
+            "wind_speed": 5.8,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "22:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 14,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1014,
+            "sea_level_pressure": null,
+            "humidity": 63,
+            "wind_deg": 210,
+            "wind_speed": 5.66,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "23:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 14,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1014,
+            "sea_level_pressure": null,
+            "humidity": 60,
+            "wind_deg": 213,
+            "wind_speed": 5.86,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "daily_forecast": {
+            "weather_status": "overcast clouds",
+            "sunset": "21:31",
+            "sunrise": "06:02",
+            "temperature": 16,
+            "temperature_min": 6,
+            "temperature_max": 17,
+            "pressure": 1019,
+            "sea_level_pressure": null,
+            "humidity": 53,
+            "wind_deg": 207,
+            "wind_speed": 6.01,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 90
+        }
+    },
+    "friday": {
+        "00:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 13,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1013,
+            "sea_level_pressure": null,
+            "humidity": 58,
+            "wind_deg": 216,
+            "wind_speed": 5.86,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "01:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 13,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1013,
+            "sea_level_pressure": null,
+            "humidity": 60,
+            "wind_deg": 216,
+            "wind_speed": 5.76,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "02:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1012,
+            "sea_level_pressure": null,
+            "humidity": 67,
+            "wind_deg": 223,
+            "wind_speed": 5.83,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "03:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1011,
+            "sea_level_pressure": null,
+            "humidity": 72,
+            "wind_deg": 226,
+            "wind_speed": 5.82,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "04:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1011,
+            "sea_level_pressure": null,
+            "humidity": 71,
+            "wind_deg": 228,
+            "wind_speed": 5.54,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "05:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 11,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 75,
+            "wind_deg": 232,
+            "wind_speed": 5.7,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "06:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 10,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 81,
+            "wind_deg": 232,
+            "wind_speed": 5.66,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "07:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 10,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 79,
+            "wind_deg": 232,
+            "wind_speed": 5.97,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "08:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 11,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 69,
+            "wind_deg": 233,
+            "wind_speed": 6.61,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "09:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 65,
+            "wind_deg": 232,
+            "wind_speed": 6.69,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 96
+        },
+        "10:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 13,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 61,
+            "wind_deg": 231,
+            "wind_speed": 7.07,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 82
+        },
+        "11:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 14,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 55,
+            "wind_deg": 231,
+            "wind_speed": 7.32,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 78
+        },
+        "12:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 49,
+            "wind_deg": 234,
+            "wind_speed": 7.67,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 83
+        },
+        "13:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 16,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 45,
+            "wind_deg": 232,
+            "wind_speed": 7.98,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 80
+        },
+        "14:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 17,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1008,
+            "sea_level_pressure": null,
+            "humidity": 42,
+            "wind_deg": 233,
+            "wind_speed": 8.14,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 76
+        },
+        "15:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1008,
+            "sea_level_pressure": null,
+            "humidity": 55,
+            "wind_deg": 228,
+            "wind_speed": 7.31,
+            "snow": null,
+            "rainfall": 0.15,
+            "clouds_coverage": 98
+        },
+        "16:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 16,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 50,
+            "wind_deg": 235,
+            "wind_speed": 8.09,
+            "snow": null,
+            "rainfall": 0.22,
+            "clouds_coverage": 85
+        },
+        "17:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 16,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 54,
+            "wind_deg": 236,
+            "wind_speed": 7.87,
+            "snow": null,
+            "rainfall": 0.25,
+            "clouds_coverage": 66
+        },
+        "18:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 16,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1006,
+            "sea_level_pressure": null,
+            "humidity": 57,
+            "wind_deg": 238,
+            "wind_speed": 7.48,
+            "snow": null,
+            "rainfall": 0.23,
+            "clouds_coverage": 54
+        },
+        "19:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1006,
+            "sea_level_pressure": null,
+            "humidity": 57,
+            "wind_deg": 236,
+            "wind_speed": 7.46,
+            "snow": null,
+            "rainfall": 0.12,
+            "clouds_coverage": 45
+        },
+        "20:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 14,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1006,
+            "sea_level_pressure": null,
+            "humidity": 59,
+            "wind_deg": 236,
+            "wind_speed": 7.23,
+            "snow": null,
+            "rainfall": 0.1,
+            "clouds_coverage": 38
+        },
+        "21:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 13,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1006,
+            "sea_level_pressure": null,
+            "humidity": 59,
+            "wind_deg": 237,
+            "wind_speed": 6.87,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 1
+        },
+        "22:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 59,
+            "wind_deg": 236,
+            "wind_speed": 6.75,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 1
+        },
+        "23:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 61,
+            "wind_deg": 232,
+            "wind_speed": 6.93,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 2
+        },
+        "daily_forecast": {
+            "weather_status": "light rain",
+            "sunset": "21:33",
+            "sunrise": "06:01",
+            "temperature": 16,
+            "temperature_min": 10,
+            "temperature_max": 17,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 45,
+            "wind_deg": 233,
+            "wind_speed": 8.14,
+            "snow": null,
+            "rainfall": 1.07,
+            "clouds_coverage": 80
+        }
+    },
+    "saturday": {
+        "00:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 11,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 64,
+            "wind_deg": 229,
+            "wind_speed": 7.02,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 1
+        },
+        "01:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 10,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 69,
+            "wind_deg": 228,
+            "wind_speed": 7.12,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 1
+        },
+        "02:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 10,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 75,
+            "wind_deg": 228,
+            "wind_speed": 7.04,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 1
+        },
+        "03:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 9,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 77,
+            "wind_deg": 226,
+            "wind_speed": 6.96,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 9
+        },
+        "04:00": {
+            "weather_status": "few clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 9,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 78,
+            "wind_deg": 227,
+            "wind_speed": 6.74,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 14
+        },
+        "05:00": {
+            "weather_status": "few clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 9,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 80,
+            "wind_deg": 226,
+            "wind_speed": 6.68,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 24
+        },
+        "06:00": {
+            "weather_status": "scattered clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 9,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 79,
+            "wind_deg": 226,
+            "wind_speed": 6.64,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 38
+        },
+        "07:00": {
+            "weather_status": "scattered clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 9,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1008,
+            "sea_level_pressure": null,
+            "humidity": 78,
+            "wind_deg": 224,
+            "wind_speed": 6.37,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 49
+        },
+        "08:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 9,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 76,
+            "wind_deg": 224,
+            "wind_speed": 6.29,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 57
+        },
+        "09:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 11,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 71,
+            "wind_deg": 222,
+            "wind_speed": 6.58,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 69
+        },
+        "10:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 60,
+            "wind_deg": 229,
+            "wind_speed": 7.39,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 53
+        },
+        "11:00": {
+            "weather_status": "scattered clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 14,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 50,
+            "wind_deg": 234,
+            "wind_speed": 7.59,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 38
+        },
+        "12:00": {
+            "weather_status": "scattered clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 44,
+            "wind_deg": 235,
+            "wind_speed": 7.76,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 32
+        },
+        "13:00": {
+            "weather_status": "scattered clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 47,
+            "wind_deg": 242,
+            "wind_speed": 7.3,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 34
+        },
+        "14:00": {
+            "weather_status": "scattered clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 47,
+            "wind_deg": 245,
+            "wind_speed": 6.78,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 39
+        },
+        "daily_forecast": {
+            "weather_status": "light rain",
+            "sunset": "21:34",
+            "sunrise": "06:00",
+            "temperature": 15,
+            "temperature_min": 9,
+            "temperature_max": 18,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 47,
+            "wind_deg": 235,
+            "wind_speed": 7.76,
+            "snow": null,
+            "rainfall": 2.53,
+            "clouds_coverage": 34
+        }
+    },
+    "sunday": {
+        "daily_forecast": {
+            "weather_status": "scattered clouds",
+            "sunset": "21:35",
+            "sunrise": "05:59",
+            "temperature": 16,
+            "temperature_min": 7,
+            "temperature_max": 16,
+            "pressure": 1016,
+            "sea_level_pressure": null,
+            "humidity": 43,
+            "wind_deg": 217,
+            "wind_speed": 6.46,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 48
+        }
+    },
+    "monday": {
+        "daily_forecast": {
+            "weather_status": "light rain",
+            "sunset": "21:36",
+            "sunrise": "05:58",
+            "temperature": 16,
+            "temperature_min": 10,
+            "temperature_max": 16,
+            "pressure": 1013,
+            "sea_level_pressure": null,
+            "humidity": 63,
+            "wind_deg": 209,
+            "wind_speed": 6.28,
+            "snow": null,
+            "rainfall": 6.04,
+            "clouds_coverage": 99
+        }
+    },
+    "tuesday": {
+        "daily_forecast": {
+            "weather_status": "light rain",
+            "sunset": "21:37",
+            "sunrise": "05:57",
+            "temperature": 14,
+            "temperature_min": 7,
+            "temperature_max": 16,
+            "pressure": 1020,
+            "sea_level_pressure": null,
+            "humidity": 72,
+            "wind_deg": 297,
+            "wind_speed": 5.24,
+            "snow": null,
+            "rainfall": 2.94,
+            "clouds_coverage": 80
+        }
+    },
+    "wednesday": {
+        "daily_forecast": {
+            "weather_status": "light rain",
+            "sunset": "21:39",
+            "sunrise": "05:56",
+            "temperature": 16,
+            "temperature_min": 7,
+            "temperature_max": 17,
+            "pressure": 1025,
+            "sea_level_pressure": null,
+            "humidity": 45,
+            "wind_deg": 324,
+            "wind_speed": 5.09,
+            "snow": null,
+            "rainfall": 0.26,
+            "clouds_coverage": 27
+        }
+    },
+    "thursday": {
+        "daily_forecast": {
+            "weather_status": "scattered clouds",
+            "sunset": "21:40",
+            "sunrise": "05:55",
+            "temperature": 18,
+            "temperature_min": 10,
+            "temperature_max": 18,
+            "pressure": 1024,
+            "sea_level_pressure": null,
+            "humidity": 43,
+            "wind_deg": 6,
+            "wind_speed": 3.29,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 48
+        }
+    },
+    "tomorrow": {
+        "00:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 13,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1013,
+            "sea_level_pressure": null,
+            "humidity": 58,
+            "wind_deg": 216,
+            "wind_speed": 5.86,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "01:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 13,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1013,
+            "sea_level_pressure": null,
+            "humidity": 60,
+            "wind_deg": 216,
+            "wind_speed": 5.76,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "02:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1012,
+            "sea_level_pressure": null,
+            "humidity": 67,
+            "wind_deg": 223,
+            "wind_speed": 5.83,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "03:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1011,
+            "sea_level_pressure": null,
+            "humidity": 72,
+            "wind_deg": 226,
+            "wind_speed": 5.82,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "04:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1011,
+            "sea_level_pressure": null,
+            "humidity": 71,
+            "wind_deg": 228,
+            "wind_speed": 5.54,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "05:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 11,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 75,
+            "wind_deg": 232,
+            "wind_speed": 5.7,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "06:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 10,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 81,
+            "wind_deg": 232,
+            "wind_speed": 5.66,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "07:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 10,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 79,
+            "wind_deg": 232,
+            "wind_speed": 5.97,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "08:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 11,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 69,
+            "wind_deg": 233,
+            "wind_speed": 6.61,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 100
+        },
+        "09:00": {
+            "weather_status": "overcast clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 65,
+            "wind_deg": 232,
+            "wind_speed": 6.69,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 96
+        },
+        "10:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 13,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1010,
+            "sea_level_pressure": null,
+            "humidity": 61,
+            "wind_deg": 231,
+            "wind_speed": 7.07,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 82
+        },
+        "11:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 14,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 55,
+            "wind_deg": 231,
+            "wind_speed": 7.32,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 78
+        },
+        "12:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 49,
+            "wind_deg": 234,
+            "wind_speed": 7.67,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 83
+        },
+        "13:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 16,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 45,
+            "wind_deg": 232,
+            "wind_speed": 7.98,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 80
+        },
+        "14:00": {
+            "weather_status": "broken clouds",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 17,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1008,
+            "sea_level_pressure": null,
+            "humidity": 42,
+            "wind_deg": 233,
+            "wind_speed": 8.14,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 76
+        },
+        "15:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1008,
+            "sea_level_pressure": null,
+            "humidity": 55,
+            "wind_deg": 228,
+            "wind_speed": 7.31,
+            "snow": null,
+            "rainfall": 0.15,
+            "clouds_coverage": 98
+        },
+        "16:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 16,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 50,
+            "wind_deg": 235,
+            "wind_speed": 8.09,
+            "snow": null,
+            "rainfall": 0.22,
+            "clouds_coverage": 85
+        },
+        "17:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 16,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 54,
+            "wind_deg": 236,
+            "wind_speed": 7.87,
+            "snow": null,
+            "rainfall": 0.25,
+            "clouds_coverage": 66
+        },
+        "18:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 16,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1006,
+            "sea_level_pressure": null,
+            "humidity": 57,
+            "wind_deg": 238,
+            "wind_speed": 7.48,
+            "snow": null,
+            "rainfall": 0.23,
+            "clouds_coverage": 54
+        },
+        "19:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 15,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1006,
+            "sea_level_pressure": null,
+            "humidity": 57,
+            "wind_deg": 236,
+            "wind_speed": 7.46,
+            "snow": null,
+            "rainfall": 0.12,
+            "clouds_coverage": 45
+        },
+        "20:00": {
+            "weather_status": "light rain",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 14,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1006,
+            "sea_level_pressure": null,
+            "humidity": 59,
+            "wind_deg": 236,
+            "wind_speed": 7.23,
+            "snow": null,
+            "rainfall": 0.1,
+            "clouds_coverage": 38
+        },
+        "21:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 13,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1006,
+            "sea_level_pressure": null,
+            "humidity": 59,
+            "wind_deg": 237,
+            "wind_speed": 6.87,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 1
+        },
+        "22:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 59,
+            "wind_deg": 236,
+            "wind_speed": 6.75,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 1
+        },
+        "23:00": {
+            "weather_status": "clear sky",
+            "sunset": null,
+            "sunrise": null,
+            "temperature": 12,
+            "temperature_min": null,
+            "temperature_max": null,
+            "pressure": 1007,
+            "sea_level_pressure": null,
+            "humidity": 61,
+            "wind_deg": 232,
+            "wind_speed": 6.93,
+            "snow": null,
+            "rainfall": null,
+            "clouds_coverage": 2
+        },
+        "daily_forecast": {
+            "weather_status": "light rain",
+            "sunset": "21:33",
+            "sunrise": "06:01",
+            "temperature": 16,
+            "temperature_min": 10,
+            "temperature_max": 17,
+            "pressure": 1009,
+            "sea_level_pressure": null,
+            "humidity": 45,
+            "wind_deg": 233,
+            "wind_speed": 8.14,
+            "snow": null,
+            "rainfall": 1.07,
+            "clouds_coverage": 80
+        }
+    }
 }
-
 ```
 
 ## License
