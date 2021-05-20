@@ -2,6 +2,7 @@ from pyowm.owm import OWM
 from pyowm.utils.config import get_default_config
 from datetime import datetime, timedelta
 from kalliope.core.NeuronModule import NeuronModule, MissingParameterException, InvalidParameterException
+from geopy.geocoders import Nominatim
 from time import sleep
 
 class Openweathermap(NeuronModule):
@@ -32,20 +33,20 @@ class Openweathermap(NeuronModule):
         # connect with the api. this will work every time
         owm = OWM(self.api_key, config_dict)
 
-        loc = owm.city_id_registry()
-        location_list = loc.locations_for(self.location, country=self.country.upper() if self.country else None)
-        if not location_list:
-            raise MissingParameterException("OpenWeatherMap did not find the location %s" % self.location)
+        # using geopy to get and find a more accurate location
+        geolocator = Nominatim(user_agent="kalliope_openweather_neuron")
+        location = geolocator.geocode(self.location, country_codes=self.country.upper() if self.country else None, language=self.lang)
         
-        # we only care about the first location in the list
-        location = location_list[0]
+        if not location:
+            raise MissingParameterException("OpenWeatherMap did not find the location %s" % self.location)
 
         returned_message = dict()
-        # load location, longitude and latitude
-        returned_message["location"] = location.name
-        returned_message["latitude"] = location.lat
-        returned_message["longitude"] = location.lon
 
+        # load location, longitude and latitude
+        returned_message["location"] = self.location
+        returned_message["latitude"] = location.latitude
+        returned_message["longitude"] = location.longitude
+        
         mgr = owm.weather_manager()
 
         # in rare cases the neuron will failed to retrieve the data, we will retry 3 times, otherwise raise an exception
@@ -53,7 +54,7 @@ class Openweathermap(NeuronModule):
             try:
                 # we make a one_call to retrieve the weather data for current weather, hourly for the next 48 hours and a daily forecast for the next 7 days
                 # see https://openweathermap.org/api/one-call-api
-                weather_data = mgr.one_call(location.lat, location.lon)
+                weather_data = mgr.one_call(location.latitude, location.longitude)
             except Exception as e:
                 if a == 2:
                     raise MissingParameterException("Openweathermap crashed and reported %s" % e)
@@ -186,7 +187,7 @@ class Openweathermap(NeuronModule):
             temp_max = int(round(_dict.get("temp_max")))
 
         return temp, temp_max, temp_min
-
+        
     def _is_parameters_ok(self):
         """
         Check if received parameters are ok to perform operations in the neuron

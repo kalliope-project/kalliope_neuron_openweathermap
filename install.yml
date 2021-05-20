@@ -3,9 +3,10 @@
   hosts: localhost
   gather_facts: no
   connection: local
-
   tasks:
     - name: "Install pip dependencies"
       pip:
-        name: "pyowm==3.2.0"
+        name: 
+          - pyowm
+          - geopy
         executable: pip3
