@@ -186,15 +186,6 @@ class Openweathermap(NeuronModule):
             temp_max = int(round(_dict.get("temp_max")))
 
         return temp, temp_max, temp_min
-    
-    def _check_con(self, connection_to_check):
-        for a in range(4):
-            try:
-                return connection_to_check()
-            except Exception as e:
-                if a == 3:
-                    raise MissingParameterException("Openweathermap crashed and reported %s" % e)
-                pass
 
     def _is_parameters_ok(self):
         """
