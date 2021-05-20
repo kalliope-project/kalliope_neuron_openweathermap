@@ -1,9 +1,9 @@
-import pyowm
+from pyowm.owm import OWM
+from pyowm.utils.config import get_default_config
 from datetime import datetime, timedelta
-
 from kalliope.core.NeuronModule import NeuronModule, MissingParameterException, InvalidParameterException
-from pyowm.exceptions.api_response_error import UnauthorizedError, NotFoundError
-
+from geopy.geocoders import Nominatim
+from time import sleep
 
 class Openweathermap(NeuronModule):
     def __init__(self, **kwargs):
@@ -17,51 +17,80 @@ class Openweathermap(NeuronModule):
         self.country = kwargs.get('country', None)
         self.day = kwargs.get('day', None)
         self.am_pm_time = kwargs.get('12h_format', False)
+        self.wind_speed_unit = kwargs.get('wind_speed_unit', 'meters_sec')
+        
+        self.time_format = '%H:%M'         
+        if self.am_pm_time:
+            self.time_format = '%I:%M %p'
 
         # check if parameters have been provided
         if not self._is_parameters_ok():
             raise InvalidParameterException
 
-        extended_location = self.location
-
-        if self.country is not None:
-            extended_location = self.location + "," + self.country
+        config_dict = get_default_config()
+        config_dict['language'] = self.lang
 
         # connect with the api. this will work every time
-        owm = pyowm.OWM(API_key=self.api_key, language=self.lang)
+        owm = OWM(self.api_key, config_dict)
 
-        # search for current weather the provided place
-        try:
-            observation = owm.weather_at_place(extended_location)
-        except UnauthorizedError as e:
-            raise MissingParameterException("OpenWeatherMap crashed and reported %s" % e)
-        except NotFoundError:
+        # using geopy to get and find a more accurate location
+        geolocator = Nominatim(user_agent="kalliope_openweather_neuron")
+        location = geolocator.geocode(self.location, country_codes=self.country.upper() if self.country else None, language=self.lang)
+        
+        if not location:
             raise MissingParameterException("OpenWeatherMap did not find the location %s" % self.location)
 
         returned_message = dict()
 
         # load location, longitude and latitude
-        returned_message["location"] = observation.get_location().get_name()
-        returned_message["latitude"] = observation.get_location().get_lat()
-        returned_message["longitude"] = observation.get_location().get_lon()
+        returned_message["location"] = self.location
+        returned_message["latitude"] = location.latitude
+        returned_message["longitude"] = location.longitude
+        
+        mgr = owm.weather_manager()
+
+        # in rare cases the neuron will failed to retrieve the data, we will retry 3 times, otherwise raise an exception
+        for a in range(3):
+            try:
+                # we make a one_call to retrieve the weather data for current weather, hourly for the next 48 hours and a daily forecast for the next 7 days
+                # see https://openweathermap.org/api/one-call-api
+                weather_data = mgr.one_call(location.latitude, location.longitude)
+            except Exception as e:
+                if a == 2:
+                    raise MissingParameterException("Openweathermap crashed and reported %s" % e)
+                sleep(1)
+                pass
 
         # get dict with current weather info
-        current_weather = observation.get_weather()
-        returned_message["current"] = self._get_dict_weather_data(current_weather)
+        returned_message["current"] = self._get_dict_weather_data(weather_data.current)
 
-        # forecast
-        self.forecast = owm.three_hours_forecast(extended_location)
         # get all available forecast. This return a list of Weather object
-        daily_forecasts = dict()
-        forecasts = self.forecast.get_forecast()
-        for weather in forecasts.get_weathers():
-            day_weather_object = datetime.fromtimestamp(weather.get_reference_time())
-            day_weather = day_weather_object.strftime('%A').lower()
-            hour_weather = day_weather_object.strftime('%H:%M').lower()
-            if day_weather not in daily_forecasts:
-                daily_forecasts[day_weather] = dict()
-            daily_forecasts[day_weather][hour_weather] = self._get_dict_weather_data(weather)
-        returned_message.update(daily_forecasts)
+        daily_forecast = dict()
+
+        # get a forecast for the next 48 hours
+        for hour in weather_data.forecast_hourly:
+            time_object = datetime.fromtimestamp(hour.reference_time())
+            day_weather = time_object.strftime('%A').lower()
+            hour_weather = time_object.strftime('%H:%M').lower()
+            if datetime.now().strftime("%Y-%m-%d") == time_object.strftime("%Y-%m-%d"):
+                day_weather = "today"
+            if day_weather not in daily_forecast:
+                daily_forecast[day_weather] = dict()
+
+            daily_forecast[day_weather][hour_weather] = self._get_dict_weather_data(hour)
+        
+        # get a daily forecast for the next 7 days
+        for day in weather_data.forecast_daily:
+            time_object = datetime.fromtimestamp(day.reference_time())
+            day_weather = time_object.strftime('%A').lower()
+            if datetime.now().strftime("%Y-%m-%d") == time_object.strftime("%Y-%m-%d"):
+                day_weather = "today"
+            if day_weather not in daily_forecast:
+                daily_forecast[day_weather] = dict()
+
+            daily_forecast[day_weather]["daily_forecast"] = self._get_dict_weather_data(day)
+
+        returned_message.update(daily_forecast)
 
         # we have a missing day in the week, set it to None
         weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -69,20 +98,96 @@ class Openweathermap(NeuronModule):
             if day not in returned_message:
                 returned_message[day] = None
 
-        # just to make the neuron simpler to use from the end user template, add a key for today and tomorrow
+        # just to make the neuron simpler to use from the end user template, add a key for tomorrow
         # that contains already reached data
         tomorrow = datetime.now() + timedelta(days=1)
-        tomorrow = tomorrow.strftime('%A').lower()
-        today = datetime.now().strftime('%A').lower()
-        returned_message["today"] = daily_forecasts.get(today)
-        returned_message["tomorrow"] = daily_forecasts.get(tomorrow)
-        # import pprint
-        # pprint.pprint(returned_message)
+        returned_message["tomorrow"] = daily_forecast.get(tomorrow.strftime('%A').lower())
+
         # forward the asked day to the template
         if self.day:
             returned_message.update({"day": self.day.lower()})
         self.say(returned_message)
+    
+    def _get_dict_weather_data(self, weather_data):
+        """
+        return a dict of current weather data from the observation object
+        :return:
+        """
+        returned_dict = dict()
+        returned_dict["weather_status"] = weather_data.detailed_status
+        
+        returned_dict["sunset"] = self._get_sun_rise_set_time(weather_data.sunset_time())
+        returned_dict["sunrise"] = self._get_sun_rise_set_time(weather_data.sunrise_time())
+        
+        temp, temp_max, temp_min = self._get_temperatures_vaĺues(weather_data.temperature(unit=self.temp_unit))
+        returned_dict["temperature"] = temp
+        returned_dict["temperature_min"] = temp_min
+        returned_dict["temperature_max"] = temp_max
+        
+        returned_dict["pressure"] = weather_data.pressure["press"]
+        returned_dict["sea_level_pressure"] = weather_data.pressure["sea_level"]
+        returned_dict["humidity"] = weather_data.humidity
+        
+        current_wind = weather_data.wind(self.wind_speed_unit)
+        returned_dict["wind_deg"] = current_wind.get("deg", None)
+        returned_dict["wind_speed"] = current_wind.get("speed", None)
+        
+        returned_dict["snow"] = self._get_snow_rain_value(weather_data.snow)
+        returned_dict["rainfall"] = self._get_snow_rain_value(weather_data.rain)
+        returned_dict["clouds_coverage"] = weather_data.clouds
 
+        return returned_dict
+
+    def _get_sun_rise_set_time(self, sun_time):
+        """
+        Three hours forecast returns none for sunrise and sunset,
+        only current weather and daily forecast returns times.
+        :return: formated sunrise / sunset time or none
+        """
+        if sun_time:
+            return datetime.fromtimestamp(sun_time).strftime(self.time_format)
+        return sun_time
+
+    def _get_snow_rain_value(self, _dict):
+        """
+        Current weather key is "1h".
+        Three hours forecast key is "3h".
+        Daily forecast key is "all".
+        :return: matching value, or None
+        """
+        if _dict.get("1h"):
+            return _dict.get("1h")
+        if _dict.get("3h"):
+            return _dict.get("3h")
+        if _dict.get("all"):
+            return _dict.get("all")
+        return None
+
+    def _get_temperatures_vaĺues(self, _dict):
+        """
+        Current weather and three hour forecast returns a "temp, temp_max, temp_min" key.
+        Daily forecast returns "day, min, max" key.
+        :return: matching rounded int value, or None
+        """
+        temp = None
+        temp_max = None
+        temp_min = None
+
+        if _dict.get("temp"):
+            temp = int(round(_dict.get("temp")))
+        if _dict.get("day"):
+            temp = int(round(_dict.get("day")))
+        if _dict.get("min"):
+            temp_min = int(round(_dict.get("min")))
+        if _dict.get("temp_min"):
+            temp_min = int(round(_dict.get("temp_min")))
+        if _dict.get("max"):
+            temp_max = int(round(_dict.get("max")))
+        if _dict.get("temp_max"):
+            temp_max = int(round(_dict.get("temp_max")))
+
+        return temp, temp_max, temp_min
+        
     def _is_parameters_ok(self):
         """
         Check if received parameters are ok to perform operations in the neuron
@@ -97,44 +202,3 @@ class Openweathermap(NeuronModule):
 
         return True
 
-    def _get_dict_weather_data(self, weather_current):
-        """
-        return a dict of current weather data from the observation object
-        :return:
-        """
-
-        returned_dict = dict()
-        returned_dict["weather_status"] = weather_current.get_detailed_status()
-
-        time_format = '%H:%M'
-        if self.am_pm_time:
-            time_format = '%I:%M %p'
-
-        returned_dict["sunset"] = datetime.fromtimestamp(weather_current.get_sunset_time()).strftime(time_format)
-        returned_dict["sunrise"] = datetime.fromtimestamp(weather_current.get_sunrise_time()).strftime(time_format)
-
-        returned_dict["temperature"] = int(round(weather_current.get_temperature(unit=self.temp_unit)["temp"]))
-        returned_dict["temperature_min"] = int(round(weather_current.get_temperature(unit=self.temp_unit)["temp_min"]))
-        returned_dict["temperature_max"] = int(round(weather_current.get_temperature(unit=self.temp_unit)["temp_max"]))
-
-        returned_dict["pressure"] = weather_current.get_pressure()["press"]
-        returned_dict["sea_level_pressure"] = weather_current.get_pressure()["sea_level"]
-
-        returned_dict["humidity"] = weather_current.get_humidity()
-
-        wind = weather_current.get_wind()
-        wind_deg = wind.get("deg", None)
-        wind_speed = wind.get("speed", None)
-        returned_dict["wind_deg"] = wind_deg
-        returned_dict["wind_speed"] = wind_speed
-
-        snow_current = weather_current.get_snow()
-        snow_current = snow_current.get('all', None)
-        rain_current = weather_current.get_rain()
-        rain_current = rain_current.get('all', None)
-        returned_dict["rainfall"] = rain_current
-        returned_dict["snow"] = snow_current
-
-        returned_dict["clouds_coverage"] = weather_current.get_clouds()
-
-        return returned_dict
